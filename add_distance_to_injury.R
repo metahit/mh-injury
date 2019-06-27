@@ -1,5 +1,5 @@
 rm(list=ls())
-setwd('~/overflow_dropbox/mh-scenarios/injury_processing/')
+setwd('~/overflow_dropbox/mh-injury/')
 ######################################################################
 
 
@@ -11,8 +11,8 @@ library(splines)
 
 model_modes <- c('pedestrian','cyclist','car/taxi','motorcycle')
 
-mh_path <- "~/overflow_dropbox/mh-scenarios/"
-overflow_path <- paste0(mh_path,"/injury_processing/rds_storage/")
+mh_path <- "~/overflow_dropbox/mh-injury/"
+overflow_path <- paste0(mh_path,"/rds_storage/")
 
 
 if(file.exists(paste0(overflow_path,'codes_for_stats19.Rds'))){
@@ -31,11 +31,11 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   ######################################################################
   ## add index to injuries
   library(readxl)
-  demography <- readxl::read_xlsx(paste0(mh_path,'/190330_sp_ind_codebook.xlsx'),sheet=2,col_names=F)
+  demography <- readxl::read_xlsx('../mh-execute/inputs/scenarios/190330_sp_ind_codebook.xlsx',sheet=2,col_names=F)
   demogindex_to_numerical <- unlist(demography[,3])
   demography[,3] <- 1:nrow(demography)
   demo_indices <- unlist(demography[,3])
-  age_table <- readxl::read_xlsx(paste0(mh_path,'/190330_sp_ind_codebook.xlsx'),sheet=1,col_names=F)
+  age_table <- readxl::read_xlsx('../mh-execute/inputs/scenarios/190330_sp_ind_codebook.xlsx',sheet=1,col_names=F)
   age_category <- unlist(age_table[,1])
   age_lower_bounds <- as.numeric(sapply(age_category,function(x)strsplit(x,' to ')[[1]][1]))
   if(file.exists(paste0(overflow_path,'processed_injuries_7.Rds'))){
@@ -71,10 +71,10 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   
   ## distance data
   cities <- list()
-  cities[[1]] <- readRDS(paste0(mh_path,'/2_OutputData/SPind_E06000022.Rds'))
-  cities[[2]] <- readRDS(paste0(mh_path,'/2_OutputData/SPind_E06000023.Rds'))
-  cities[[3]] <- readRDS(paste0(mh_path,'/2_OutputData/SPind_E06000024.Rds'))
-  cities[[4]] <- readRDS(paste0(mh_path,'/2_OutputData/SPind_E06000025.Rds'))
+  cities[[1]] <- readRDS(paste0('../mh-execute/inputs/scenarios/SPind_E06000022.Rds'))
+  cities[[2]] <- readRDS(paste0('../mh-execute/inputs/scenarios/SPind_E06000023.Rds'))
+  cities[[3]] <- readRDS(paste0('../mh-execute/inputs/scenarios/SPind_E06000024.Rds'))
+  cities[[4]] <- readRDS(paste0('../mh-execute/inputs/scenarios/SPind_E06000025.Rds'))
   
   synth_pop <- do.call(rbind,cities)
   synth_pop$dem_index <- match(synth_pop$demogindex,demogindex_to_numerical)
