@@ -176,7 +176,7 @@ for(i in 1:2)
   for(j in 1:2)
     city_table[[i]][[j]] <- injury_table[[i]][[j]][injury_table[[i]][[j]]$year==2015,]
 
-saveRDS(city_table,paste0(overflow_path,'processed_injuries_9.Rds'),version=2)
+saveRDS(city_table,'../mh-execute/inputs/injury/processed_injuries_9.Rds',version=2)
 
 
 ######################################################################
@@ -240,7 +240,7 @@ for(i in 1:2) {
     trimmed_mod$linear.predictors <- c()
     print(3)
     predict(trimmed_mod,newdata=injury_table[[i]][[j]],type='response')
-    saveRDS(trimmed_mod,paste0('city_region',i,j,'.Rds'),version=2)
+    saveRDS(trimmed_mod,paste0('../mh-execute/inputs/injury/city_region',i,j,'.Rds'),version=2)
   }
 }
 
