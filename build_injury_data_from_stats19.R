@@ -33,8 +33,7 @@ fastmerge <- function(d1, d2) {
 
 # function To get and merge 2005-2014 with 2015 datasets 
 
-get.data <- function(is.local=TRUE, local.dir="."){
-  if(!is.local) {
+get.data <- function(){
   # url0514 contains file0514 from 2005-2014
   url0514 <- "http://data.dft.gov.uk.s3.amazonaws.com/road-accidents-safety-data/Stats19_Data_2005-2014.zip"
   # individual files
@@ -55,34 +54,46 @@ get.data <- function(is.local=TRUE, local.dir="."){
   names(c0514)[names(c0514)=="ï..Accident_Index"] <- "Accident_Index"
   names(v0514)[names(v0514)=="ï..Accident_Index"] <- "Accident_Index"
 
-  # url2015 contains file2015
-  file2015 <- c("Vehicles_2015.csv","Casualties_2015.csv","Accidents_2015.csv")
-  url2015 <- "http://data.dft.gov.uk/road-accidents-safety-data/RoadSafetyData_2015.zip"
-  download.file(url2015,temp)
-  v2015 <<- read.csv(unz(temp, file2015[1]))
-  c2015 <<- read.csv(unz(temp, file2015[2]))
-  a2015 <<- read.csv(unz(temp, file2015[3]))
-  assign("Accidents0515",fastmerge(a0514,a2015), envir=.GlobalEnv)
-  assign("Casualties0515",fastmerge(c0514,c2015), envir=.GlobalEnv)
-  assign("Vehicles0515",fastmerge(v0514,v2015), envir=.GlobalEnv)
-  unlink(temp)
-  } 
-  else {
-  # data are downloaded locally
-  wd <- getwd()
-  setwd(local.dir)
-
-  for (x in c("Accidents", "Casualties", "Vehicles"))
-  {
-    cat(x, "\n")
-    in2015 <- read.csv(paste("1a_DataOriginal/",x,"_2015.csv",sep=""))
-    in0514 <- read.csv(paste("1a_DataOriginal/",x,"0514.csv",sep=""))
-    ### see above
-    names(in0514)[names(in0514)=="ï..Accident_Index"] <- "Accident_Index"
-    assign(paste(x,'0515',sep=""), fastmerge(in0514,in2015), envir=.GlobalEnv)
+  filenames <- c('Vehicles','Casualties','Accidents')
+  assign('Vehicles',v0514)
+  assign('Casualties',c0514)
+  assign('Accidents',a0514)
+  short_name <- c('Veh.csv','Cas.csv','Acc.csv')
+  for(year in 2015:2017){
+    for(table_name_ind in 1:length(filenames)){
+      table_name <- filenames[table_name_ind]
+      tryCatch({
+        root_name <- ifelse(year==2015,'RoadSafetyData_','dftRoadSafetyData_')
+        filename <- paste0("http://data.dft.gov.uk/road-accidents-safety-data/",root_name,table_name,"_",year,".zip")
+        download.file(filename,temp)
+      }, 
+      warning=function(w) {
+        root_name <- ifelse(year==2015,'RoadSafety_','dftRoadSafety_')
+        filename <- paste0("http://data.dft.gov.uk/road-accidents-safety-data/",root_name,table_name,"_",year,".zip")
+        download.file(filename,temp)
+      },error=function(e){
+        root_name <- ifelse(year==2015,'RoadSafety_','dftRoadSafety_')
+        filename <- paste0("http://data.dft.gov.uk/road-accidents-safety-data/",root_name,table_name,"_",year,".zip")
+        download.file(filename,temp)
+      }
+      )
+      tryCatch(unzip(temp,exdir=overflow_path),warning=function(w)print(w))
+      root_name <- ifelse(year==2015,'','dftRoadSafety_')
+      full_name <-  paste0(overflow_path,'/',root_name,table_name,"_",year,".csv")
+      file_contents <- if(file.exists(full_name)){
+        read.csv(full_name,stringsAsFactors = F)
+      }else{
+        read.csv( paste0(overflow_path,'/',short_name[table_name_ind]),stringsAsFactors = F)
+      }
+      print(file_contents[1,])
+      assign(table_name,fastmerge(get(table_name),file_contents))
+      print(get(table_name)[1,])
+      unlink(temp)
+    }
   }
-  setwd(wd)
-  }
+  Accidents <<- Accidents
+  Casualties <<- Casualties
+  Vehicles <<- Vehicles
 }
 
 
@@ -95,7 +106,7 @@ get.data <- function(is.local=TRUE, local.dir="."){
 if(file.exists(paste0(overflow_path,"processed_injuries_1.Rds"))){
   stopped <- readRDS(paste0(overflow_path,"processed_injuries_1.Rds"))
 }else{
-  get.data(is.local=FALSE)
+  get.data()
   
   # rm(v0514,c0514,a0514,v2015,a2015,c2015)
   # For codebook see https://discover.ukdataservice.ac.uk/catalogue?sn=7752
@@ -106,16 +117,16 @@ if(file.exists(paste0(overflow_path,"processed_injuries_1.Rds"))){
   
   # get.data(local.dir="z_ITHIMfiles/Stats19")
   
-  names(Accidents0515) <- tolower(names(Accidents0515))
-  names(Casualties0515) <- tolower(names(Casualties0515))
-  names(Vehicles0515) <- tolower(names(Vehicles0515))
+  names(Accidents) <- tolower(names(Accidents))
+  names(Casualties) <- tolower(names(Casualties))
+  names(Vehicles) <- tolower(names(Vehicles))
   
   # Merge three datasets keeping required variables
   v1 <- c("accident_index","local_authority_.highway.", "local_authority_.district.", "x1st_road_class", "date", "number_of_vehicles","day_of_week",'time','urban_or_rural_area')
   v2 <- c("accident_index","vehicle_reference", "vehicle_type", "sex_of_driver", "age_of_driver") 
   v3 <- c("accident_index","vehicle_reference","casualty_reference", "casualty_class", "casualty_severity", "sex_of_casualty", "age_of_casualty")
-  av <- merge(Accidents0515[v1], Vehicles0515[v2], by="accident_index",all=TRUE)
-  avc <- merge(av,Casualties0515[v3],by=c("accident_index","vehicle_reference"),all=TRUE)
+  av <- merge(Accidents[v1], Vehicles[v2], by="accident_index",all=TRUE)
+  avc <- merge(av,Casualties[v3],by=c("accident_index","vehicle_reference"),all=TRUE)
   
   # Drop Wales and Scotland
   stopped <- subset(avc,local_authority_.district.<=699)
@@ -211,7 +222,8 @@ if(file.exists(paste0(overflow_path,'processed_injuries_2.Rds'))){
     # sorts by 3 vars->generate little_n's, delete intermediate var
     stopped <- mutate(arrange(stopped,accident_index, cas_mode.int, random0),
                       vartemp=unlist(lapply(group_size(by_stopped), FUN=seq_len)))
-    stopped[[paste0('littlen_cas', x) ]] = stopped$vartemp   ; stopped$vartemp =NULL
+    stopped[[paste0('littlen_cas', x) ]] = stopped$vartemp 
+    stopped$vartemp =NULL
     
     #pedestrians= casualties hurt in mode=1    
     #pedestrian age/sex set equal to one randomly selected pedestrian within the accident
@@ -416,20 +428,20 @@ hit_run_tab <- sapply(c(0,1),function(y)sapply(names(codes_for_stats19),function
 roadtype_tab <- sapply(c('Motorway/A(M)','A','B, C, Unclassified'),function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,roadtype==y&region==x))))
 cas_mode_tab <- sapply(c('pedestrian','cyclist','car/taxi','motorcycle'),function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,cas_mode==y&region==x))))
 strike_mode_tab <- sapply(c('pedestrian','cyclist','car/taxi','motorcycle','bus','heavy goods','light goods','NOV'),function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,strike_mode==y&region==x))))
-year_tab <- sapply(2005:2015,function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,year==y&region==x))))
+year_tab <- sapply(2005:2017,function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,year==y&region==x))))
 cas_male_tab <- sapply(c(0,1),function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,cas_male==y&region==x))))
 strike_male_tab <- sapply(c(0,1),function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,strike_male==y&region==x))))
 cas_age_tab <- sapply(0:100,function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,cas_age==y&region==x))))
 strike_age_tab <- sapply(0:100,function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,strike_age==y&region==x))))
 
 library(pracma)
-cols <- rainbow(length(city_regions))
+cols <- rainbow(length(codes_for_stats19))
 par(mar=c(5,5,2,2)); matplot(t(repmat(c(0:100),nrow(cas_age_tab),1)),t(cas_age_tab),lwd=2,typ='l',lty=1,frame=F,xlab='Casualty age',ylab='Count',cex.axis=1.5,cex.lab=1.5,col=cols)
-legend(legend=rev(names(city_regions)),col=rev(cols),x=60,y=8000,bty='n',lwd=2)
+legend(legend=rev(names(codes_for_stats19)),col=rev(cols),x=60,y=8000,bty='n',lwd=2)
 par(mar=c(5,5,2,2)); matplot(t(repmat(c(0:100),nrow(strike_age_tab),1)),t(strike_age_tab),lwd=2,typ='l',lty=1,frame=F,xlab='Strike age',ylab='Count',cex.axis=1.5,cex.lab=1.5,col=cols)
-legend(legend=rev(names(city_regions)),col=rev(cols),x=60,y=7000,bty='n',lwd=2)
-par(mar=c(5,5,2,2)); matplot(t(repmat(c(2005:2015),nrow(year_tab),1)),t(year_tab),lwd=2,typ='l',lty=1,frame=F,xlab='Year',ylab='Count',cex.axis=1.5,cex.lab=1.5,col=cols)
-legend(legend=rev(names(city_regions)),col=rev(cols),x=2011,y=24000,bty='n',lwd=2)
+legend(legend=rev(names(codes_for_stats19)),col=rev(cols),x=60,y=7000,bty='n',lwd=2)
+par(mar=c(5,5,2,2)); matplot(t(repmat(c(2005:2017),nrow(year_tab),1)),t(year_tab),lwd=2,typ='l',lty=1,frame=F,xlab='Year',ylab='Count',cex.axis=1.5,cex.lab=1.5,col=cols)
+legend(legend=rev(names(codes_for_stats19)),col=rev(cols),x=2011,y=24000,bty='n',lwd=2)
 par(mar=c(9,5,2,2)); barplot(hit_run_tab[,2]/rowSums(hit_run_tab)*100,beside=T,col=cols,xlab='',ylab='Percent hit and run',cex.axis=1.5,cex.lab=1.5,las=2)
 par(mar=c(5,5,2,2)); barplot(roadtype_tab/t(repmat(rowSums(roadtype_tab),3,1))*100,beside=T,col=cols,xlab='Road type',names.arg = c('Motorway/A(M)','A','B, C, Unclassified'),ylab='Percent',cex.axis=1.5,cex.lab=1.5)
 par(mar=c(5,5,2,2)); barplot(cas_mode_tab/t(repmat(rowSums(cas_mode_tab),4,1))*100,beside=T,col=cols,xlab='Casualty mode',names.arg=c('pedestrian','cyclist','car/taxi','motorcycle'),ylab='Percent',cex.axis=1.5,cex.lab=1.5)
@@ -441,7 +453,7 @@ par(mar=c(9,6,2,2)); barplot(severity_tab[,1],beside=T,col=cols,xlab='',cex.axis
 
 strike_age_hitrun_tab <- sapply(0:100,function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,strike_age==y&region==x&hitrun==0))))
 par(mar=c(5,5,2,2)); matplot(t(repmat(c(0:100),nrow(strike_age_hitrun_tab),1)),t(strike_age_hitrun_tab),lwd=2,typ='l',lty=1,frame=F,xlab='Strike age',ylab='Count',cex.axis=1.5,cex.lab=1.5,col=cols)
-legend(legend=rev(names(city_regions)),col=rev(cols),x=60,y=7000,bty='n',lwd=2)
+legend(legend=rev(names(codes_for_stats19)),col=rev(cols),x=60,y=7000,bty='n',lwd=2)
 
 
 
@@ -451,6 +463,7 @@ excluded_injuries$child_striker <- subset(stopped,strike_age<16)
 excluded_injuries$van_cas <- subset(stopped,cas_mode=='light goods')
 excluded_injuries$hgv_cas <- subset(stopped,cas_mode=='heavy goods')
 unique(stopped$cas_mode)
+lapply(excluded_injuries,nrow)
 
 ## omit all unknown urban/rural: 21 slight injuries in 2005 in liverpool and sheffield.
 subset(stopped,urban_or_rural_area==3)
