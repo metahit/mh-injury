@@ -555,6 +555,11 @@ if(file.exists(paste0(overflow_path,'processed_injuries_6_tabulated_injuries.Rds
   count_nas$rate <- 1-predict(logmod,newdata=mutate(count_nas,total=1),type='response')
   saveRDS(count_nas,paste0(overflow_path,'processed_injuries_5_NA_table_for_reporting_rate.Rds'),version=2)
   
+  # remove underage events
+  for(j in 1:length(injury_long)) 
+    injury_long[[j]]$whw <- subset(injury_long[[j]]$whw,strike_age > 15)
+  for(j in 1:2) 
+    injury_long[[1]][[j]] <- subset(injury_long[[1]][[j]],cas_age > 15)
   
   ## assign age groups
   age_label <- 'strike_age'
