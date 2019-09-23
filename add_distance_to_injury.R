@@ -75,7 +75,7 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   colnames(mode_road_city_dist) <- c('city','mode','motorway','urban_A','rural_A','urban_B','rural_B')
   mode_road_city_dist$mode[mode_road_city_dist$mode=='lgv'] <- 'light goods'
   mode_road_city_dist$mode[mode_road_city_dist$mode=='hgv'] <- 'heavy goods'
-  mode_road_city_dist_ordered <- mode_road_city_dist[,match(roads,colnames(mode_road_city_dist))]
+  mode_road_city_dist_ordered <- as.matrix(mode_road_city_dist[,match(roads,colnames(mode_road_city_dist))])
   for(i in 3:ncol(mode_road_city_dist)) mode_road_city_dist[,i] <- mode_road_city_dist[,i]/total_mode_city
   
   cities <- list()
@@ -124,6 +124,14 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   # road by mode
   roads <- unique(injury_table[[1]][[1]]$road)
   
+  # initialise distance
+  for(j in 1:2){
+    injury_table[[1]][[j]]$cas_distance <- 0
+    injury_table[[j]][[1]]$strike_distance <- 0
+    injury_table[[2]][[j]]$cas_distance <- 1
+    injury_table[[j]][[2]]$strike_distance <- 1
+  }
+  
   for(city_name in names(codes_for_stats19)){
   
     mode_proportions <- matrix(0,nrow=length(roads),ncol=length(model_modes))
@@ -138,9 +146,6 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
     # road by year, city
     
     for(j in 1:2){
-      # initialise distance
-      injury_table[[1]][[j]]$cas_distance <- 0
-      injury_table[[j]][[1]]$strike_distance <- 0
       city_index <- injury_table[[1]][[j]]$region==city_name
       for(i in 1:ncol(cas_travel)){
         indices <- which(injury_table[[1]][[j]]$cas_mode==colnames(cas_travel)[i]&city_index)
@@ -153,19 +158,17 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
         injury_table[[j]][[1]]$strike_distance[indices] <- strike_travel[injury_table[[j]][[1]]$strike_index[indices],i] * mode_proportions[injury_table[[j]][[1]]$road_index[indices],i]
       }
       
-      ##!! do road and year distances for van, bus, light goods, heavy goods.
+      ##!! do road and year distances for bus, light goods, heavy goods.
       
       city_index <- injury_table[[2]][[j]]$region==city_name
-      injury_table[[2]][[j]]$cas_distance <- 1
       for(cas_mode in c('bus','heavy goods','light goods')) {
         indices <- which(injury_table[[2]][[j]]$cas_mode==cas_mode&city_index)
-        injury_table[[2]][[j]]$cas_distance[indices] <- mode_road_city_dist_ordered[mode_road_city_dist$mode==cas_mode&city_index,injury_table[[2]][[j]]$road_index[indices]]
+        injury_table[[2]][[j]]$cas_distance[indices] <- mode_road_city_dist_ordered[mode_road_city_dist$mode==cas_mode&mode_road_city_dist$city==city_name,injury_table[[2]][[j]]$road_index[indices]]
       }
-      injury_table[[j]][[2]]$strike_distance <- 1
       city_index <- injury_table[[j]][[2]]$region==city_name
       for(strike_mode in c('bus','heavy goods','light goods')) {
-        indices <- which(injury_table[[2]][[j]]$strike_mode==strike_mode&city_index)
-        injury_table[[j]][[2]]$strike_distance[indices] <- mode_road_city_dist_ordered[mode_road_city_dist$mode==strike_mode&city_index,injury_table[[j]][[2]]$road_index[indices]]
+        indices <- which(injury_table[[j]][[2]]$strike_mode==strike_mode&city_index)
+        injury_table[[j]][[2]]$strike_distance[indices] <- mode_road_city_dist_ordered[mode_road_city_dist$mode==strike_mode&mode_road_city_dist$city==city_name,injury_table[[j]][[2]]$road_index[indices]]
       }
     }
   }
