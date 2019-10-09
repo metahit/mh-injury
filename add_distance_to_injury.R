@@ -3,6 +3,7 @@ setwd('~/overflow_dropbox/mh-injury/')
 ######################################################################
 
 
+library(data.table)
 library(stringr)
 library(dplyr)
 library(stats)
@@ -70,11 +71,11 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   
   
   ## distance data
-  all_distances <- readRDS('../mh-execute/all_distances.Rds')
+  all_distances <- readRDS('../mh-execute/inputs/distances/all_distances.Rds')
   distance_for_strike <- all_distances[[1]]$distance_for_strike
   distance_for_cas <- all_distances[[1]]$distance_for_cas
   
-  mode_road_city_dist <- read.csv('../mh-execute/outputs/mode_road_city.csv',stringsAsFactors = F)
+  mode_road_city_dist <- read.csv('../mh-execute/inputs/distances/mode_road_city.csv',stringsAsFactors = F)
   total_mode_city <- rowSums(mode_road_city_dist[,-c(1:2)])
   colnames(mode_road_city_dist) <- c('city','mode','motorway','urban_A','rural_A','urban_B','rural_B')
   mode_road_city_dist$mode[mode_road_city_dist$mode=='lgv'] <- 'light goods'
@@ -130,7 +131,7 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
     
     ## bus cas distance should be sum over distance_for_cas
     for(road_type in c('motorway','rural_A','rural_B','urban_A','urban_B'))
-      mode_road_city_dist_ordered[mode_road_city_dist$mode==cas_mode&mode_road_city_dist$city==city_name,which(colnames(mode_road_city_dist_ordered)==road_type)] <- sum(subset(distance_for_cas,cas_mode=='bus')[[road_type]])
+      mode_road_city_dist_ordered[mode_road_city_dist$mode=='bus'&mode_road_city_dist$city==city_name,which(colnames(mode_road_city_dist_ordered)==road_type)] <- sum(subset(distance_for_cas,cas_mode=='bus')[[road_type]])
     
     for(j in 1:2){
       
