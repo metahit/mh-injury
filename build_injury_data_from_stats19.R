@@ -544,12 +544,12 @@ if(file.exists(paste0(overflow_path,'processed_injuries_6_tabulated_injuries.Rds
   count_nas <- group_by(rbind(do.call(rbind,cas_na),do.call(rbind,strike_na)),cas_severity,cas_mode,strike_mode,road) %>% 
     summarise(nas=dplyr::n()) %>% 
     droplevels() %>% 
-    as.data.frame() %>%    # remove "grouped" class, which breaks filling with zeroes
+    as.data.frame() %>%    
     complete(cas_severity,cas_mode,strike_mode,road,fill=list(nas=0)) 
   totals <- group_by(stopped,cas_severity,cas_mode,strike_mode,road) %>% 
     summarise(total=dplyr::n()) %>% 
     droplevels() %>% 
-    as.data.frame() %>%    # remove "grouped" class, which breaks filling with zeroes
+    as.data.frame() %>%    
     complete(cas_severity,cas_mode,strike_mode,road,fill=list(total=0)) 
   count_nas <- left_join(count_nas,totals,by=c('cas_severity','cas_mode','strike_mode','road'))
   
@@ -584,28 +584,28 @@ if(file.exists(paste0(overflow_path,'processed_injuries_6_tabulated_injuries.Rds
     group_by(injury_long$primary$whw,year,cas_male,cas_severity,cas_mode,strike_mode,cas_age_cat,road,region,strike_age_cat,strike_male) %>% 
     summarise(count=dplyr::n()) %>% 
     droplevels() %>% 
-    as.data.frame() %>%    # remove "grouped" class, which breaks filling with zeroes
+    as.data.frame() %>%    
     complete(year,cas_male,cas_severity,cas_mode,strike_mode,cas_age_cat,road,region,strike_age_cat,strike_male,fill=list(count=0)) 
   
   injury_table$primary$noov <-
     group_by(injury_long$primary$noov,year,cas_male,cas_severity,cas_mode,strike_mode,cas_age_cat,road,region) %>% 
     summarise(count=dplyr::n()) %>% 
     droplevels() %>% 
-    as.data.frame() %>%    # remove "grouped" class, which breaks filling with zeroes
+    as.data.frame() %>%    
     complete(year,cas_male,cas_severity,cas_mode,strike_mode,cas_age_cat,road,region,fill=list(count=0)) 
   
   injury_table$secondary$whw <-
     group_by(injury_long$secondary$whw,year,cas_severity,cas_mode,strike_mode,road,region,strike_age_cat,strike_male) %>% 
     summarise(count=dplyr::n()) %>% 
     droplevels() %>% 
-    as.data.frame() %>%    # remove "grouped" class, which breaks filling with zeroes
+    as.data.frame() %>%    
     complete(year,cas_severity,cas_mode,strike_mode,road,region,strike_age_cat,strike_male,fill=list(count=0)) 
   
   injury_table$secondary$noov <-
     group_by(injury_long$secondary$noov,year,cas_severity,cas_mode,strike_mode,road,region) %>% 
     summarise(count=dplyr::n()) %>% 
     droplevels() %>% 
-    as.data.frame() %>%    # remove "grouped" class, which breaks filling with zeroes
+    as.data.frame() %>%    
     complete(year,cas_severity,cas_mode,strike_mode,road,region,fill=list(count=0)) 
   
   for(i in 1:2) for(j in 1:2) injury_table[[i]][[j]]$year <- as.numeric(injury_table[[i]][[j]]$year)

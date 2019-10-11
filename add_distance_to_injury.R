@@ -71,11 +71,10 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   
   
   ## distance data
-  all_distances <- readRDS('../mh-execute/inputs/distances/all_distances.Rds')
-  distance_for_strike <- all_distances[[1]]$distance_for_strike
-  distance_for_cas <- all_distances[[1]]$distance_for_cas
+  # road by mode
+  roads <- unique(injury_table[[1]][[1]]$road)
   
-  mode_road_city_dist <- read.csv('../mh-execute/inputs/distances/mode_road_city.csv',stringsAsFactors = F)
+  mode_road_city_dist <- read.csv('../mh-distance/outputs/mode_road_city.csv',stringsAsFactors = F)
   total_mode_city <- rowSums(mode_road_city_dist[,-c(1:2)])
   colnames(mode_road_city_dist) <- c('city','mode','motorway','urban_A','rural_A','urban_B','rural_B')
   mode_road_city_dist$mode[mode_road_city_dist$mode=='lgv'] <- 'light goods'
@@ -83,74 +82,89 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   mode_road_city_dist_ordered <- as.matrix(mode_road_city_dist[,match(roads,colnames(mode_road_city_dist))])
   for(i in 3:ncol(mode_road_city_dist)) mode_road_city_dist[,i] <- mode_road_city_dist[,i]/total_mode_city
   
-  # road by mode
-  roads <- unique(injury_table[[1]][[1]]$road)
   
-  # initialise distance
-  for(j in 1:2){
-    injury_table[[1]][[j]]$cas_distance <- 0
-    injury_table[[j]][[1]]$strike_distance <- 0
-    injury_table[[2]][[j]]$cas_distance <- 1
-    injury_table[[j]][[2]]$strike_distance <- 1
-  }
+  all_distances <- readRDS('../mh-distance/outputs/all_distances.Rds')
+  scenarios <- names(all_distances)
+  
+  for(scen in 1:length(scenarios)){
+    scen_pref <- scenarios[scen]
+    
+    strike_col <- paste0(scen_pref,'strike_distance')
+    cas_col <- paste0(scen_pref,'cas_distance')
+    
+    distance_for_strike <- all_distances[[scen]]$distance_for_strike
+    distance_for_cas <- all_distances[[scen]]$distance_for_cas
+    all_distances[[scen]] <- c()
   
   
-  distance_for_cas$mode_name[distance_for_cas$mode_name=='cardrive'] <- 'car/taxi'
-  distance_for_cas$mode_name[distance_for_cas$mode_name=='cycle'] <- 'cyclist' 
-  distance_for_cas$mode_name[distance_for_cas$mode_name=='walk'] <- 'pedestrian'
-  distance_for_cas$mode_name[distance_for_cas$mode_name=='mbikedrive'] <- 'motorcycle'
-  distance_for_cas$demogindex <- match(distance_for_cas$demogindex,demogindex_to_numerical)
-  colnames(distance_for_cas)[c(1,2,4:7)] <- c('cas_mode','cas_index',"rural_B","rural_A","urban_B","urban_A")
-  
-  distance_for_strike$mode_name[distance_for_strike$mode_name=='cardrive'] <- 'car/taxi'
-  distance_for_strike$mode_name[distance_for_strike$mode_name=='cycle'] <- 'cyclist' 
-  distance_for_strike$mode_name[distance_for_strike$mode_name=='walk'] <- 'pedestrian'
-  distance_for_strike$mode_name[distance_for_strike$mode_name=='mbikedrive'] <- 'motorcycle'
-  distance_for_strike$demogindex <- match(distance_for_strike$demogindex,demogindex_to_numerical)
-  colnames(distance_for_strike)[c(1,2,4:7)] <- c('strike_mode','strike_index',"rural_B","rural_A","urban_B","urban_A")
-  
-  for(city_name in names(codes_for_stats19)){
-    
-    ## primary cas
-    la_distances <- subset(distance_for_cas,la%in%codes_for_stats19$bristol)#[[city_name]])
-    city_distances <- la_distances[,lapply(.SD,sum),.SDcols=c("rural_B","rural_A","urban_B","urban_A",  'motorway'),by=c('cas_index','cas_mode')]
-    melted_city_distances <- melt(city_distances,id.vars=c('cas_mode','cas_index'),variable.name='road',value.name='cas_distance')
-    melted_city_distances <- subset(melted_city_distances,cas_mode%in%c("pedestrian","cyclist","car/taxi","motorcycle"))
-    for(j in 1:2)
-      setDT(injury_table[[1]][[j]])[melted_city_distances,on=c('cas_mode','cas_index','road'),cas_distance:=i.cas_distance]
-    
-    ## whw strike
-    la_distances <- subset(distance_for_strike,la%in%codes_for_stats19$bristol)#[[city_name]])
-    city_distances <- la_distances[,lapply(.SD,sum),.SDcols=c("rural_B","rural_A","urban_B","urban_A",  'motorway'),by=c('strike_index','strike_mode')]
-    melted_city_distances <- melt(city_distances,id.vars=c('strike_mode','strike_index'),variable.name='road',value.name='strike_distance')
-    melted_city_distances <- subset(melted_city_distances,strike_mode%in%c("pedestrian","cyclist","car/taxi","motorcycle"))
-    for(j in 1:2)
-      setDT(injury_table[[j]][[1]])[melted_city_distances,on=c('strike_mode','strike_index','road'),strike_distance:=i.strike_distance]
-    
-    # road by year, city
-    
-    ## bus cas distance should be sum over distance_for_cas
-    for(road_type in c('motorway','rural_A','rural_B','urban_A','urban_B'))
-      mode_road_city_dist_ordered[mode_road_city_dist$mode=='bus'&mode_road_city_dist$city==city_name,which(colnames(mode_road_city_dist_ordered)==road_type)] <- sum(subset(distance_for_cas,cas_mode=='bus')[[road_type]])
-    
+    # initialise distance
     for(j in 1:2){
+      injury_table[[1]][[j]][[cas_col]] <- 0
+      injury_table[[j]][[1]][[strike_col]] <- 0
+      injury_table[[2]][[j]][[cas_col]] <- 1
+      injury_table[[j]][[2]][[strike_col]] <- 1
+    }
+  
+    
+    distance_for_cas$mode_name[distance_for_cas$mode_name=='cardrive'] <- 'car/taxi'
+    distance_for_cas$mode_name[distance_for_cas$mode_name=='cycle'] <- 'cyclist' 
+    distance_for_cas$mode_name[distance_for_cas$mode_name=='walk'] <- 'pedestrian'
+    distance_for_cas$mode_name[distance_for_cas$mode_name=='mbikedrive'] <- 'motorcycle'
+    distance_for_cas$demogindex <- match(distance_for_cas$demogindex,demogindex_to_numerical)
+    colnames(distance_for_cas)[c(1,2,4:7)] <- c('cas_mode','cas_index',"rural_B","rural_A","urban_B","urban_A")
+    
+    distance_for_strike$mode_name[distance_for_strike$mode_name=='cardrive'] <- 'car/taxi'
+    distance_for_strike$mode_name[distance_for_strike$mode_name=='cycle'] <- 'cyclist' 
+    distance_for_strike$mode_name[distance_for_strike$mode_name=='walk'] <- 'pedestrian'
+    distance_for_strike$mode_name[distance_for_strike$mode_name=='mbikedrive'] <- 'motorcycle'
+    distance_for_strike$demogindex <- match(distance_for_strike$demogindex,demogindex_to_numerical)
+    colnames(distance_for_strike)[c(1,2,4:7)] <- c('strike_mode','strike_index',"rural_B","rural_A","urban_B","urban_A")
+  
+    for(city_name in names(codes_for_stats19)){
       
-      ##!! do road and year distances for bus, light goods, heavy goods.
-      city_index <- injury_table[[2]][[j]]$region==city_name
-      for(cas_mode in c('bus','heavy goods','light goods')) {
-        indices <- which(injury_table[[2]][[j]]$cas_mode==cas_mode&city_index)
-        injury_table[[2]][[j]]$cas_distance[indices] <- mode_road_city_dist_ordered[mode_road_city_dist$mode==cas_mode&mode_road_city_dist$city==city_name,injury_table[[2]][[j]]$road_index[indices]]
-      }
-      city_index <- injury_table[[j]][[2]]$region==city_name
-      for(strike_mode in c('bus','heavy goods','light goods')) {
-        indices <- which(injury_table[[j]][[2]]$strike_mode==strike_mode&city_index)
-        injury_table[[j]][[2]]$strike_distance[indices] <- mode_road_city_dist_ordered[mode_road_city_dist$mode==strike_mode&mode_road_city_dist$city==city_name,injury_table[[j]][[2]]$road_index[indices]]
+      ## primary cas
+      la_distances <- subset(distance_for_cas,la%in%codes_for_stats19$bristol)#[[city_name]])
+      city_distances <- la_distances[,lapply(.SD,sum),.SDcols=c("rural_B","rural_A","urban_B","urban_A",  'motorway'),by=c('cas_index','cas_mode')]
+      melted_city_distances <- melt(city_distances,id.vars=c('cas_mode','cas_index'),variable.name='road',value.name=cas_col)
+      melted_city_distances <- subset(melted_city_distances,cas_mode%in%c("pedestrian","cyclist","car/taxi","motorcycle"))
+      melted_city_distances$region <- city_name
+      for(j in 1:2)
+        setDT(injury_table[[1]][[j]])[melted_city_distances,on=c('cas_mode','cas_index','road','region'),paste0(cas_col):=get(paste0('i.',cas_col))]
+      
+      ## whw strike
+      la_distances <- subset(distance_for_strike,la%in%codes_for_stats19$bristol)#[[city_name]])
+      city_distances <- la_distances[,lapply(.SD,sum),.SDcols=c("rural_B","rural_A","urban_B","urban_A",  'motorway'),by=c('strike_index','strike_mode')]
+      melted_city_distances <- melt(city_distances,id.vars=c('strike_mode','strike_index'),variable.name='road',value.name=strike_col)
+      melted_city_distances <- subset(melted_city_distances,strike_mode%in%c("pedestrian","cyclist","car/taxi","motorcycle"))
+      melted_city_distances$region <- city_name
+      for(j in 1:2)
+        setDT(injury_table[[j]][[1]])[melted_city_distances,on=c('strike_mode','strike_index','road','region'),paste0(strike_col):=get(paste0('i.',strike_col))]
+      
+      # road by year, city
+      
+      ## bus cas distance should be sum over distance_for_cas
+      for(road_type in c('motorway','rural_A','rural_B','urban_A','urban_B'))
+        mode_road_city_dist_ordered[mode_road_city_dist$mode=='bus'&mode_road_city_dist$city==city_name,which(colnames(mode_road_city_dist_ordered)==road_type)] <- sum(subset(distance_for_cas,cas_mode=='bus')[[road_type]])
+      
+      for(j in 1:2){
+        
+        ##!! do road and year distances for bus, light goods, heavy goods.
+        city_index <- injury_table[[2]][[j]]$region==city_name
+        for(cas_mode in c('bus','heavy goods','light goods')) {
+          indices <- which(injury_table[[2]][[j]]$cas_mode==cas_mode&city_index)
+          injury_table[[2]][[j]][[cas_col]][indices] <- mode_road_city_dist_ordered[mode_road_city_dist$mode==cas_mode&mode_road_city_dist$city==city_name,injury_table[[2]][[j]]$road_index[indices]]
+        }
+        city_index <- injury_table[[j]][[2]]$region==city_name
+        for(strike_mode in c('bus','heavy goods','light goods')) {
+          indices <- which(injury_table[[j]][[2]]$strike_mode==strike_mode&city_index)
+          injury_table[[j]][[2]][[strike_col]][indices] <- mode_road_city_dist_ordered[mode_road_city_dist$mode==strike_mode&mode_road_city_dist$city==city_name,injury_table[[j]][[2]]$road_index[indices]]
+        }
       }
     }
+    
+  
+  #for(i in 1:2) for(j in 1:2) injury_table[[i]][[j]] <- subset(injury_table[[i]][[j]],get(cas_col)>0&get(strike_col)>0)
   }
-  
-  
-  for(i in 1:2) for(j in 1:2) injury_table[[i]][[j]] <- subset(injury_table[[i]][[j]],cas_distance>0&strike_distance>0)
   
   ages <- unique(injury_table[[1]][[1]]$cas_age_cat)
   ages <- ages[!is.na(ages)]
@@ -163,7 +177,7 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   for(j in 1:2)  injury_table[[1]][[j]]$cas_age <- mid_ages[injury_table[[1]][[j]]$cas_index]
   for(j in 1:2)  injury_table[[j]][[1]]$strike_age <- mid_ages[injury_table[[j]][[1]]$strike_index]
   
-  keepnames <- c("year","cas_male","cas_severity","cas_mode","strike_mode","road","region","strike_male","count","cas_distance","strike_distance","cas_age","strike_age","rate",'cas_index','strike_index')
+  keepnames <- c("year","cas_male","cas_severity","cas_mode","strike_mode","road","region","strike_male","count",paste0(scenarios,'cas_distance'),paste0(scenarios,'strike_distance'),"cas_age","strike_age","rate",'cas_index','strike_index')
   for(i in 1:2)
     for(j in 1:2)
       injury_table[[i]][[j]] <- setDT(injury_table[[i]][[j]])[,colnames(injury_table[[i]][[j]])%in%keepnames,with=F]
@@ -203,6 +217,12 @@ trim_glm_object <- function(obj){
   #attr(obj$terms,".Environment") = c()
   attr(obj$formula,".Environment") = c()
   obj
+}
+
+for(i in 1:2) for(j in 1:2){
+  colnames(injury_table[[i]][[j]])[which(colnames(injury_table[[i]][[j]])=='base_cas_distance')] <- 'cas_distance'
+  colnames(injury_table[[i]][[j]])[which(colnames(injury_table[[i]][[j]])=='base_strike_distance')] <- 'strike_distance'
+  injury_table[[i]][[j]] <- subset(injury_table[[i]][[j]],cas_distance>0&strike_distance>0)
 }
 
 test_model <- F
