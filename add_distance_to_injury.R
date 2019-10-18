@@ -94,7 +94,7 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
     
     distance_for_strike <- all_distances[[scen]]$distance_for_strike
     distance_for_cas <- all_distances[[scen]]$distance_for_cas
-    all_distances[[scen]] <- c()
+    all_distances[[scen]] <- 0
   
   
     # initialise distance
