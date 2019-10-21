@@ -22,8 +22,8 @@ injuries$road[injuries$roadtype=='A'&injuries$urban_or_rural_area==2] <- 'rural_
 injuries$road[injuries$roadtype=='B, C, Unclassified'&injuries$urban_or_rural_area==1] <- 'urban_B'
 injuries$road[injuries$roadtype=='B, C, Unclassified'&injuries$urban_or_rural_area==2] <- 'rural_B'
 
-for(ext in c('rts','0_smooth','250_smooth','0_raw','250_raw')){
-  mode_road_city_dist <- read.csv(paste0('../mh-execute/outputs/mode_road_city_',ext,'.csv'),stringsAsFactors = F)
+for(ext in c('')){ #'rts','0_smooth','250_smooth','0_raw','250_raw')){
+  mode_road_city_dist <- read.csv(paste0('../mh-distance/outputs/mode_road_city',ext,'.csv'),stringsAsFactors = F)
   total_mode_city <- rowSums(mode_road_city_dist[,-c(1:2)])
   colnames(mode_road_city_dist) <- c('city','mode','motorway','urban_A','rural_A','urban_B','rural_B')
   mode_road_city_dist$mode[mode_road_city_dist$mode=='lgv'] <- 'light goods'
@@ -36,7 +36,7 @@ for(ext in c('rts','0_smooth','250_smooth','0_raw','250_raw')){
   modes <- unique(injuries$cas_mode)
   
   cols <- rainbow(length(cities))
-  {pdf(paste0('cas_rates_',ext,'.pdf'),width=15,height=10); par(mfrow=c(2,3))
+  {pdf(paste0('cas_rates',ext,'.pdf'),width=15,height=10); par(mfrow=c(2,3))
     for(i in 1:length(modes)){
       dist_name <- strsplit(modes[i],'/')[[1]][1]
       if(dist_name %in% mode_road_city_dist$mode){
@@ -50,8 +50,8 @@ for(ext in c('rts','0_smooth','250_smooth','0_raw','250_raw')){
         print(total)
         raw_rates <- raw_rates[match(city_order,cities),]
         rownames(raw_rates) <- city_order
-        raw_rates <- rbind(raw_rates,total=total)
-        xlsx::write.xlsx(raw_rates,file=paste0('cas_rates_',ext,'.xlsx'),sheetName=gsub('/','',modes[i]),append=(i!=2))
+        raw_rates_write <- rbind(raw_rates,total=total)
+        xlsx::write.xlsx(raw_rates_write,file=paste0('cas_rates',ext,'.xlsx'),sheetName=gsub('/','',modes[i]),append=(i!=2))
         raw_rates[raw_rates==0] <- 1e-0
         raw_rates[is.na(raw_rates)] <- 1e-0
         raw_rates[!sapply(raw_rates,is.finite)] <- 1e-0
@@ -61,7 +61,7 @@ for(ext in c('rts','0_smooth','250_smooth','0_raw','250_raw')){
     }
     dev.off()}
   
-  {pdf(paste0('strike_rates_',ext,'.pdf'),width=15,height=10); par(mfrow=c(2,3))
+  {pdf(paste0('strike_rates',ext,'.pdf'),width=15,height=10); par(mfrow=c(2,3))
     for(i in 1:length(modes)){
       dist_name <- strsplit(modes[i],'/')[[1]][1]
       if(dist_name %in% mode_road_city_dist$mode){
@@ -75,8 +75,8 @@ for(ext in c('rts','0_smooth','250_smooth','0_raw','250_raw')){
         print(total)
         raw_rates <- raw_rates[match(city_order,cities),]
         rownames(raw_rates) <- city_order
-        raw_rates <- rbind(raw_rates,total=total)
-        xlsx::write.xlsx(raw_rates,file=paste0('strike_rates_',ext,'.xlsx'),sheetName=gsub('/','',modes[i]),append=(i!=2))
+        raw_rates_write <- rbind(raw_rates,total=total)
+        xlsx::write.xlsx(raw_rates_write,file=paste0('strike_rates',ext,'.xlsx'),sheetName=gsub('/','',modes[i]),append=(i!=2))
         raw_rates[raw_rates==0] <- 1e-0
         raw_rates[is.na(raw_rates)] <- 1e-0
         raw_rates[!sapply(raw_rates,is.finite)] <- 1e-0
