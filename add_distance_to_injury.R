@@ -82,9 +82,13 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   mode_road_city_dist_ordered <- as.matrix(mode_road_city_dist[,match(roads,colnames(mode_road_city_dist))])
   for(i in 3:ncol(mode_road_city_dist)) mode_road_city_dist[,i] <- mode_road_city_dist[,i]/total_mode_city
   
-  
-  all_distances <- readRDS('../mh-distance/outputs/all_distances.Rds')
-  scenarios <- names(all_distances)
+  scenarios <- c('base_','scen_')
+  all_distances <- list()
+  all_distances[[1]] <- readRDS('../mh-distance/outputs/base_all_distances.Rds')
+  all_distances[[1]]$distance_for_pa <- all_distances[[1]]$distance_for_inh <- NULL
+  all_distances[[2]] <- readRDS('../mh-distance/outputs/scen_all_distances.Rds')
+  all_distances[[2]]$distance_for_pa <- all_distances[[2]]$distance_for_inh <- NULL
+  names(all_distances) <- scenarios
   
   for(scen in 1:length(scenarios)){
     scen_pref <- scenarios[scen]
@@ -123,7 +127,7 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
     for(city_name in names(codes_for_stats19)){
       
       ## primary cas
-      la_distances <- subset(distance_for_cas,la%in%codes_for_stats19$bristol)#[[city_name]])
+      la_distances <- subset(distance_for_cas,city_region==city_name)
       city_distances <- la_distances[,lapply(.SD,sum),.SDcols=c("rural_B","rural_A","urban_B","urban_A",  'motorway'),by=c('cas_index','cas_mode')]
       melted_city_distances <- melt(city_distances,id.vars=c('cas_mode','cas_index'),variable.name='road',value.name=cas_col)
       melted_city_distances <- subset(melted_city_distances,cas_mode%in%c("pedestrian","cyclist","car/taxi","motorcycle"))
@@ -132,7 +136,7 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
         setDT(injury_table[[1]][[j]])[melted_city_distances,on=c('cas_mode','cas_index','road','region'),paste0(cas_col):=get(paste0('i.',cas_col))]
       
       ## whw strike
-      la_distances <- subset(distance_for_strike,la%in%codes_for_stats19$bristol)#[[city_name]])
+      la_distances <- subset(distance_for_strike,city_region==city_name)
       city_distances <- la_distances[,lapply(.SD,sum),.SDcols=c("rural_B","rural_A","urban_B","urban_A",  'motorway'),by=c('strike_index','strike_mode')]
       melted_city_distances <- melt(city_distances,id.vars=c('strike_mode','strike_index'),variable.name='road',value.name=strike_col)
       melted_city_distances <- subset(melted_city_distances,strike_mode%in%c("pedestrian","cyclist","car/taxi","motorcycle"))
