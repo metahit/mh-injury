@@ -84,10 +84,8 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   
   scenarios <- c('base_','scen_')
   all_distances <- list()
-  all_distances[[1]] <- readRDS('../mh-distance/outputs/base_all_distances.Rds')
-  all_distances[[1]]$distance_for_pa <- all_distances[[1]]$distance_for_inh <- NULL
-  all_distances[[2]] <- readRDS('../mh-distance/outputs/scen_all_distances.Rds')
-  all_distances[[2]]$distance_for_pa <- all_distances[[2]]$distance_for_inh <- NULL
+  all_distances[[1]] <- readRDS('../mh-execute/inputs/distances/base_injury_distances.Rds')
+  all_distances[[2]] <- readRDS('../mh-execute/inputs/distances/scen_injury_distances.Rds')
   names(all_distances) <- scenarios
   
   for(scen in 1:length(scenarios)){
