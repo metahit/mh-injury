@@ -237,7 +237,7 @@ if(test_model){
 
 
 #formula_one <- 'count~ns(year,df=2)+cas_severity+cas_mode+strike_mode+road+region+offset(log(cas_distance)+log(strike_distance))'
-formula_one <- 'count~year+cas_severity+region+offset(log(cas_distance)+log(strike_distance))'
+formula_one <- 'count~year+cas_severity+cas_mode+strike_mode+road+region+offset(log(cas_distance)+log(strike_distance))'
 
 ##!! decide offset, splines, interactions
 
@@ -252,6 +252,7 @@ for(i in 1:2) {
     ##for model build, set rate=1
     injury_table[[i]][[j]]$rate <- 1
     mod[[i]][[j]] <- glm(as.formula(form),family=poisson(link=log),data=injury_table[[i]][[j]])
+    print(AIC(mod[[i]][[j]]))
     #saveRDS(mod[[i]][[j]],paste0('/scratch/rob/city_region',i,j,'.Rds'),version=2)
     trimmed_mod <- trim_glm_object(mod[[i]][[j]])
     print(sapply(mod[[i]][[j]],function(x)length(serialize(x, NULL))))
@@ -275,5 +276,32 @@ cas_coefs <- names(mod[[1]][[1]]$coefficients)[!names(mod[[1]][[1]]$coefficients
 sapply(mod[[1]],function(y)y$coefficients[names(y$coefficients)%in%cas_coefs])
 str_coefs <- names(mod[[1]][[1]]$coefficients)[!names(mod[[1]][[1]]$coefficients)%in%names(mod[[1]][[2]]$coefficients)]
 sapply(list(mod[[1]][[1]],mod[[2]][[1]]),function(y)y$coefficients[names(y$coefficients)%in%str_coefs])
+
+mod <- list()
+for(i in 1:2) {
+  mod[[i]] <- list()
+  for(j in 1:2) {
+    form <- formula_one
+    if(i==1) form <- paste0(form,'+cas_male+ns(cas_age,df=4)')
+    if(j==1) form <- paste0(form,'+strike_male+ns(strike_age,df=4)')
+    print(form)
+    ##for model build, set rate=1
+    injury_table[[i]][[j]]$rate <- 1
+    mod[[i]][[j]] <- glm(as.formula(form),family=poisson(link=log),data=injury_table[[i]][[j]])
+    print(AIC(mod[[i]][[j]]))
+    #saveRDS(mod[[i]][[j]],paste0('/scratch/rob/city_region',i,j,'.Rds'),version=2)
+    trimmed_mod <- trim_glm_object(mod[[i]][[j]])
+    print(sapply(mod[[i]][[j]],function(x)length(serialize(x, NULL))))
+    print(1)
+    predict(trimmed_mod,newdata=injury_table[[i]][[j]],type='response')
+    trimmed_mod$offset <- c()
+    print(2)
+    predict(trimmed_mod,newdata=injury_table[[i]][[j]],type='response')
+    trimmed_mod$linear.predictors <- c()
+    print(3)
+    predict(trimmed_mod,newdata=injury_table[[i]][[j]],type='response')
+    saveRDS(trimmed_mod,paste0('../mh-execute/inputs/injury/city_region',i,j,'.Rds'),version=2)
+  }
+}
 
 
