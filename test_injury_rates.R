@@ -58,6 +58,7 @@ cols <- rainbow(length(cities))
       raw_rates_write <- rbind(as.matrix(raw_rates),total=matrix(total,ncol=5))
       rownames(raw_rates_write) <- c(city_order,'total')
       xlsx::write.xlsx(raw_rates_write,file=paste0('cas_rates.xlsx'),sheetName=gsub('/','',modes[i]),append=(i!=1))
+      xlsx::write.xlsx(subset(total_mode_city,mode==dist_name)[,2:7],file=paste0('cas_distances.xlsx'),sheetName=gsub('/','',modes[i]),append=(i!=1))
       raw_rates[raw_rates==0] <- 1e-0
       raw_rates[is.na(raw_rates)] <- 1e-0
       raw_rates[!sapply(raw_rates,is.finite)] <- 1e-0
@@ -95,6 +96,7 @@ injuries$strike_mode[injuries$strike_mode=='car/taxi'] <- 'car'
       raw_rates_write <- rbind(as.matrix(raw_rates),total=matrix(total,ncol=5))
       rownames(raw_rates_write) <- c(city_order,'total')
       xlsx::write.xlsx(raw_rates_write,file=paste0('strike_rates.xlsx'),sheetName=gsub('/','',modes[i]),append=(i!=1))
+      xlsx::write.xlsx(subset(total_mode_city,mode==dist_name)[,2:7],file=paste0('strike_distances.xlsx'),sheetName=gsub('/','',modes[i]),append=(i!=1))
       raw_rates[raw_rates==0] <- 1e-0
       raw_rates[is.na(raw_rates)] <- 1e-0
       raw_rates[!sapply(raw_rates,is.finite)] <- 1e-0
@@ -110,7 +112,7 @@ injuries$strike_mode[injuries$strike_mode=='car/taxi'] <- 'car'
 # strike ksi
 for(i in 1:length(modes)){
   dist_name <- strsplit(modes[i],'/')[[1]][1]
-  if(dist_name %in% mode_road_city_dist$mode){
+  #if(dist_name %in% mode_road_city_dist$mode){
     raw_numbers <- t(sapply(cities,function(x)
       sapply(roads,function(y) nrow(subset(injuries,region==x&road==y&strike_mode==modes[i])))
     ))
@@ -120,14 +122,14 @@ for(i in 1:length(modes)){
     raw_numbers <- raw_numbers[match(city_order,cities),]
     rownames(raw_numbers) <- city_order
     raw_numbers <- rbind(raw_numbers,total=total)
-    xlsx::write.xlsx(raw_numbers,file='strike_numbers.xlsx',sheetName=paste0(gsub('/','',modes[i]),'_ksi'),append=(i!=2))
-  }
+    xlsx::write.xlsx(raw_numbers,file='strike_numbers.xlsx',sheetName=paste0(gsub('/','',modes[i]),'_ksi'),append=(i!=1))
+  #}
 }
 
 # strike fatal
 for(i in 1:length(modes)){
   dist_name <- strsplit(modes[i],'/')[[1]][1]
-  if(dist_name %in% mode_road_city_dist$mode){
+  #if(dist_name %in% mode_road_city_dist$mode){
     raw_numbers <- t(sapply(cities,function(x)
       sapply(roads,function(y) nrow(subset(injuries,region==x&road==y&strike_mode==modes[i]&cas_severity=='Fatal')))
     ))
@@ -138,13 +140,13 @@ for(i in 1:length(modes)){
     rownames(raw_numbers) <- city_order
     raw_numbers <- rbind(raw_numbers,total=total)
     xlsx::write.xlsx(raw_numbers,file='strike_numbers.xlsx',sheetName=paste0(gsub('/','',modes[i]),'_fatal'),append=T)
-  }
+  #}
 }
 
 # cas ksi
 for(i in 1:length(modes)){
   dist_name <- strsplit(modes[i],'/')[[1]][1]
-  if(dist_name %in% mode_road_city_dist$mode){
+  #if(dist_name %in% mode_road_city_dist$mode){
     raw_numbers <- t(sapply(cities,function(x)
       sapply(roads,function(y) nrow(subset(injuries,region==x&road==y&cas_mode==modes[i])))
     ))
@@ -154,14 +156,14 @@ for(i in 1:length(modes)){
     raw_numbers <- raw_numbers[match(city_order,cities),]
     rownames(raw_numbers) <- city_order
     raw_numbers <- rbind(raw_numbers,total=total)
-    xlsx::write.xlsx(raw_numbers,file='cas_numbers.xlsx',sheetName=paste0(gsub('/','',modes[i]),'_ksi'),append=(i!=2))
-  }
+    xlsx::write.xlsx(raw_numbers,file='cas_numbers.xlsx',sheetName=paste0(gsub('/','',modes[i]),'_ksi'),append=(i!=1))
+  #}
 }
 
 # cas fatal
 for(i in 1:length(modes)){
   dist_name <- strsplit(modes[i],'/')[[1]][1]
-  if(dist_name %in% mode_road_city_dist$mode){
+  #if(dist_name %in% mode_road_city_dist$mode){
     raw_numbers <- t(sapply(cities,function(x)
       sapply(roads,function(y) nrow(subset(injuries,region==x&road==y&cas_mode==modes[i]&cas_severity=='Fatal')))
     ))
@@ -172,5 +174,5 @@ for(i in 1:length(modes)){
     rownames(raw_numbers) <- city_order
     raw_numbers <- rbind(raw_numbers,total=total)
     xlsx::write.xlsx(raw_numbers,file='cas_numbers.xlsx',sheetName=paste0(gsub('/','',modes[i]),'_fatal'),append=T)
-  }
+  #}
 }
