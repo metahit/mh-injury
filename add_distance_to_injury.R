@@ -71,6 +71,11 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   
   
   ## distance data
+  # scale by year
+  scale_by_year <- readxl::read_xls('../mh-scenarios/1_InputData/2_CityRegion_scaling/RTS_NTS_distances_cityreg.xls',sheet=3,col_names=T)
+  ## reference year is 2015
+  reference_year <- 2015
+  
   # road by mode
   roads <- unique(injury_table[[1]][[1]]$road)
   
@@ -79,6 +84,9 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   colnames(mode_road_city_dist) <- c('city','mode','motorway','urban_A','rural_A','urban_B','rural_B')
   mode_road_city_dist$mode[mode_road_city_dist$mode=='lgv'] <- 'light goods'
   mode_road_city_dist$mode[mode_road_city_dist$mode=='hgv'] <- 'heavy goods'
+  ##!! omit road types
+  mode_road_city_dist$other <- rowSums(mode_road_city_dist[,colnames(mode_road_city_dist)%in%c('urban_A','rural_A','urban_B','rural_B')])
+  mode_road_city_dist <- mode_road_city_dist[,!colnames(mode_road_city_dist)%in%c('urban_A','rural_A','urban_B','rural_B')]
   mode_road_city_dist_ordered <- as.matrix(mode_road_city_dist[,match(roads,colnames(mode_road_city_dist))])
   for(i in 3:ncol(mode_road_city_dist)) mode_road_city_dist[,i] <- mode_road_city_dist[,i]/total_mode_city
   
@@ -113,20 +121,20 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
     distance_for_cas$mode_name[distance_for_cas$mode_name=='walk'] <- 'pedestrian'
     distance_for_cas$mode_name[distance_for_cas$mode_name=='mbikedrive'] <- 'motorcycle'
     distance_for_cas$demogindex <- match(distance_for_cas$demogindex,demogindex_to_numerical)
-    colnames(distance_for_cas)[c(1,2,4:7)] <- c('cas_mode','cas_index',"rural_B","rural_A","urban_B","urban_A")
+    colnames(distance_for_cas)[c(1,2)] <- c('cas_mode','cas_index')#,"rural_B","rural_A","urban_B","urban_A")
     
     distance_for_strike$mode_name[distance_for_strike$mode_name=='cardrive'] <- 'car/taxi'
     distance_for_strike$mode_name[distance_for_strike$mode_name=='cycle'] <- 'cyclist' 
     distance_for_strike$mode_name[distance_for_strike$mode_name=='walk'] <- 'pedestrian'
     distance_for_strike$mode_name[distance_for_strike$mode_name=='mbikedrive'] <- 'motorcycle'
     distance_for_strike$demogindex <- match(distance_for_strike$demogindex,demogindex_to_numerical)
-    colnames(distance_for_strike)[c(1,2,4:7)] <- c('strike_mode','strike_index',"rural_B","rural_A","urban_B","urban_A")
+    colnames(distance_for_strike)[c(1,2)] <- c('strike_mode','strike_index')#,"rural_B","rural_A","urban_B","urban_A")
   
     for(city_name in names(codes_for_stats19)){
-      
+      ##!! scale by year - scale_by_year
       ## primary cas
       la_distances <- subset(distance_for_cas,city_region==city_name)
-      city_distances <- la_distances[,lapply(.SD,sum),.SDcols=c("rural_B","rural_A","urban_B","urban_A",  'motorway'),by=c('cas_index','cas_mode')]
+      city_distances <- la_distances[,lapply(.SD,sum),.SDcols=roads,by=c('cas_index','cas_mode')]
       melted_city_distances <- melt(city_distances,id.vars=c('cas_mode','cas_index'),variable.name='road',value.name=cas_col)
       melted_city_distances <- subset(melted_city_distances,cas_mode%in%c("pedestrian","cyclist","car/taxi","motorcycle"))
       melted_city_distances$region <- city_name
@@ -135,7 +143,7 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
       
       ## whw strike
       la_distances <- subset(distance_for_strike,city_region==city_name)
-      city_distances <- la_distances[,lapply(.SD,sum),.SDcols=c("rural_B","rural_A","urban_B","urban_A",  'motorway'),by=c('strike_index','strike_mode')]
+      city_distances <- la_distances[,lapply(.SD,sum),.SDcols=roads,by=c('strike_index','strike_mode')]
       melted_city_distances <- melt(city_distances,id.vars=c('strike_mode','strike_index'),variable.name='road',value.name=strike_col)
       melted_city_distances <- subset(melted_city_distances,strike_mode%in%c("pedestrian","cyclist","car/taxi","motorcycle"))
       melted_city_distances$region <- city_name
@@ -145,7 +153,7 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
       # road by year, city
       
       ## bus cas distance should be sum over distance_for_cas
-      for(road_type in c('motorway','rural_A','rural_B','urban_A','urban_B'))
+      for(road_type in roads)
         mode_road_city_dist_ordered[mode_road_city_dist$mode=='bus'&mode_road_city_dist$city==city_name,which(colnames(mode_road_city_dist_ordered)==road_type)] <- sum(subset(distance_for_cas,cas_mode=='bus')[[road_type]])
       
       for(j in 1:2){
@@ -237,7 +245,7 @@ if(test_model){
 
 
 #formula_one <- 'count~ns(year,df=2)+cas_severity+cas_mode+strike_mode+road+region+offset(log(cas_distance)+log(strike_distance))'
-formula_one <- 'count~year+cas_severity+cas_mode*strike_mode*road+region+offset(log(cas_distance)+log(strike_distance))'
+formula_one <- 'count~year+cas_severity+cas_mode*strike_mode+road+road:(cas_mode+strike_mode)+region+offset(log(cas_distance)+log(strike_distance))'
 
 ##!! decide offset, splines, interactions
 
@@ -248,13 +256,14 @@ for(i in 1:2) {
     injury_table[[i]][[j]][order(year),]
     form <- formula_one
     if(i==1){
-      form <- paste0(form,'+cas_male*ns(cas_age,df=4)+cas_mode:ns(cas_age,df=4)')
+      form <- paste0(form,'+cas_male*ns(cas_age,df=4)+cas_mode:(ns(cas_age,df=4)+cas_male)')
       #injury_table[[i]][[j]] <- injury_table[[i]][[j]][order(cas_male,cas_age),]
     }
     if(j==1){
-      form <- paste0(form,'+strike_male*ns(strike_age,df=4)+strike_mode:ns(strike_age,df=4)')
+      form <- paste0(form,'+strike_male*ns(strike_age,df=4)+strike_mode:(strike_male+ns(strike_age,df=4))')
       #injury_table[[i]][[j]] <- injury_table[[i]][[j]][order(strike_male,strike_age),]
     }
+    form <- paste0(form,'+cas_mode:cas_severity')
     print(form)
     ##for model build, set rate=1
     injury_table[[i]][[j]]$rate <- 1
@@ -281,8 +290,9 @@ for(i in 1:2) {
   mod[[i]] <- list()
   for(j in 1:2) {
     form <- formula_one
-    if(i==1) form <- paste0(form,'+cas_male*ns(cas_age,df=4)+cas_male:cas_mode')
-    if(j==1) form <- paste0(form,'+strike_male*ns(strike_age,df=4)+strike_male:strike_mode')
+    if(i==1) form <- paste0(form,'+cas_male*ns(cas_age,df=4)+(cas_male+ns(cas_age,df=4)):cas_mode')
+    if(j==1) form <- paste0(form,'+strike_male*ns(strike_age,df=4)+(strike_male+ns(strike_age,df=4)):strike_mode')
+    form <- paste0(form,'+strike_mode:cas_severity')
     print(form)
     ##for model build, set rate=1
     injury_table[[i]][[j]]$rate <- 1

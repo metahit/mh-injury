@@ -500,16 +500,18 @@ if(file.exists(paste0(overflow_path,'processed_injuries_6_tabulated_injuries.Rds
   injury_table <- readRDS(paste0(overflow_path,'processed_injuries_6_tabulated_injuries.Rds'))
 }else{
   ## omit unknown urban/rural (12, slight, 2005)
-  stopped <- subset(stopped,urban_or_rural_area!=3)
+  #stopped <- subset(stopped,urban_or_rural_area!=3)
   
   ## assign road types
   stopped$road <- 'motorway'
-  stopped$road[stopped$roadtype=='A'&stopped$urban_or_rural_area==1] <- 'urban_A'
-  stopped$road[stopped$roadtype=='A'&stopped$urban_or_rural_area==2] <- 'rural_A'
-  stopped$road[stopped$roadtype=='B, C, Unclassified'&stopped$urban_or_rural_area==1] <- 'urban_B'
-  stopped$road[stopped$roadtype=='B, C, Unclassified'&stopped$urban_or_rural_area==2] <- 'rural_B'
-  stopped$road[stopped$road=='motorway'&stopped$urban_or_rural_area==1&(stopped$cas_mode%in%c('pedestrian','cyclist')|stopped$strike_mode%in%c('pedestrian','cyclist'))] <- 'urban_A'
-  stopped$road[stopped$road=='motorway'&stopped$urban_or_rural_area==2&(stopped$cas_mode%in%c('pedestrian','cyclist')|stopped$strike_mode%in%c('pedestrian','cyclist'))] <- 'rural_A'
+  stopped$road[stopped$roadtype%in%c('A','B, C, Unclassified')] <- 'other'
+  stopped$road[stopped$road=='motorway'&(stopped$cas_mode%in%c('pedestrian','cyclist')|stopped$strike_mode%in%c('pedestrian','cyclist'))] <- 'other'
+  #stopped$road[stopped$roadtype=='A'&stopped$urban_or_rural_area==1] <- 'urban_A'
+  #stopped$road[stopped$roadtype=='A'&stopped$urban_or_rural_area==2] <- 'rural_A'
+  #stopped$road[stopped$roadtype=='B, C, Unclassified'&stopped$urban_or_rural_area==1] <- 'urban_B'
+  #stopped$road[stopped$roadtype=='B, C, Unclassified'&stopped$urban_or_rural_area==2] <- 'rural_B'
+  #stopped$road[stopped$road=='motorway'&stopped$urban_or_rural_area==1&(stopped$cas_mode%in%c('pedestrian','cyclist')|stopped$strike_mode%in%c('pedestrian','cyclist'))] <- 'urban_A'
+  #stopped$road[stopped$road=='motorway'&stopped$urban_or_rural_area==2&(stopped$cas_mode%in%c('pedestrian','cyclist')|stopped$strike_mode%in%c('pedestrian','cyclist'))] <- 'rural_A'
   
   ## divide into primary and secondary, whw and noov
   
