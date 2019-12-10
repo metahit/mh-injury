@@ -80,7 +80,8 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   col_names <- strsplit(colnames(scale_by_year_raw)[reference_col],reference_year)[[1]][1]
   colnames(scale_by_year_raw) <- sapply(colnames(scale_by_year_raw),function(x)gsub(col_names,'',x))
   scale_by_year <- scale_by_year_raw
-  for(yr in unique(injury_table[[1]][[1]]$year)) 
+  years <- unique(injury_table[[2]][[2]]$year)
+  for(yr in years) 
     scale_by_year[[as.character(yr)]] <- scale_by_year_raw[[as.character(yr)]]/scale_by_year_raw[[as.character(reference_year)]]
   scale_by_year$modename[scale_by_year$modename=='cartaxi'] <- 'car/taxi'
   scale_by_year$modename[scale_by_year$modename=='cycle'] <- 'bicycle'
@@ -88,7 +89,6 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   
   # road by mode
   roads <- unique(injury_table[[1]][[1]]$road)
-  years <- unique(injury_table[[2]][[2]]$year)
   
   mode_road_city_dist <- read.csv(paste0(overflow_path,'mode_road_city.csv'),stringsAsFactors = F)
   colnames(mode_road_city_dist)[1:3] <- c('road','mode','year')
@@ -97,8 +97,8 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   
   scenarios <- c('base_','scen_')
   all_distances <- list()
-  all_distances[[1]] <- readRDS('../mh-execute/inputs/distances/base_injury_distances.Rds')
-  all_distances[[2]] <- readRDS('../mh-execute/inputs/distances/scen_injury_distances.Rds')
+  for(scen in 1:length(scenarios))
+    all_distances[[scen]] <- readRDS(paste0(overflow_path,scenarios[scen],'injury_distances.Rds'))
   names(all_distances) <- scenarios
   
   for(scen in 1:length(scenarios)){
