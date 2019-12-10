@@ -16,7 +16,7 @@ mh_path <- "~/overflow_dropbox/mh-injury/"
 overflow_path <- paste0(mh_path,"/rds_storage/")
 
 
-if(file.exists(paste0(overflow_path,'codes_for_stats19.Rds'))){
+if(file.exists(paste0(overflow_path,'codes_for_stats19.Rds'))&&file.exists(paste0(overflow_path,'city_regions.Rds'))){
   codes_for_stats19 <- readRDS(paste0(overflow_path,'codes_for_stats19.Rds'))
   city_regions <- readRDS(paste0(overflow_path,'city_regions.Rds'))
 }else{
@@ -69,26 +69,31 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   }
   ######################################################################
   
+  for(i in 1:2) for(j in 1:2) injury_table[[i]][[j]] <- copy(setDT(injury_table[[i]][[j]]))
   
   ## distance data
   # scale by year
-  scale_by_year <- readxl::read_xls('../mh-scenarios/1_InputData/2_CityRegion_scaling/RTS_NTS_distances_cityreg.xls',sheet=3,col_names=T)
+  scale_by_year_raw <- readxl::read_xls('../mh-scenarios/1_InputData/2_CityRegion_scaling/RTS_NTS_distances_cityreg.xls',sheet=3,col_names=T)
   ## reference year is 2015
   reference_year <- 2015
+  reference_col <- which(sapply(colnames(scale_by_year_raw),function(x)grepl(reference_year,x)))
+  col_names <- strsplit(colnames(scale_by_year_raw)[reference_col],reference_year)[[1]][1]
+  colnames(scale_by_year_raw) <- sapply(colnames(scale_by_year_raw),function(x)gsub(col_names,'',x))
+  scale_by_year <- scale_by_year_raw
+  for(yr in unique(injury_table[[1]][[1]]$year)) 
+    scale_by_year[[as.character(yr)]] <- scale_by_year_raw[[as.character(yr)]]/scale_by_year_raw[[as.character(reference_year)]]
+  scale_by_year$modename[scale_by_year$modename=='cartaxi'] <- 'car/taxi'
+  scale_by_year$modename[scale_by_year$modename=='cycle'] <- 'bicycle'
+  scale_by_year$modename[scale_by_year$modename=='van'] <- 'lgv'
   
   # road by mode
   roads <- unique(injury_table[[1]][[1]]$road)
+  years <- unique(injury_table[[2]][[2]]$year)
   
-  mode_road_city_dist <- read.csv('../mh-distance/outputs/mode_road_city.csv',stringsAsFactors = F)
-  total_mode_city <- rowSums(mode_road_city_dist[,-c(1:2)])
-  colnames(mode_road_city_dist) <- c('city','mode','motorway','urban_A','rural_A','urban_B','rural_B')
+  mode_road_city_dist <- read.csv(paste0(overflow_path,'mode_road_city.csv'),stringsAsFactors = F)
+  colnames(mode_road_city_dist)[1:3] <- c('road','mode','year')
   mode_road_city_dist$mode[mode_road_city_dist$mode=='lgv'] <- 'light goods'
   mode_road_city_dist$mode[mode_road_city_dist$mode=='hgv'] <- 'heavy goods'
-  ##!! omit road types
-  mode_road_city_dist$other <- rowSums(mode_road_city_dist[,colnames(mode_road_city_dist)%in%c('urban_A','rural_A','urban_B','rural_B')])
-  mode_road_city_dist <- mode_road_city_dist[,!colnames(mode_road_city_dist)%in%c('urban_A','rural_A','urban_B','rural_B')]
-  mode_road_city_dist_ordered <- as.matrix(mode_road_city_dist[,match(roads,colnames(mode_road_city_dist))])
-  for(i in 3:ncol(mode_road_city_dist)) mode_road_city_dist[,i] <- mode_road_city_dist[,i]/total_mode_city
   
   scenarios <- c('base_','scen_')
   all_distances <- list()
@@ -137,9 +142,16 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
       city_distances <- la_distances[,lapply(.SD,sum),.SDcols=roads,by=c('cas_index','cas_mode')]
       melted_city_distances <- melt(city_distances,id.vars=c('cas_mode','cas_index'),variable.name='road',value.name=cas_col)
       melted_city_distances <- subset(melted_city_distances,cas_mode%in%c("pedestrian","cyclist","car/taxi","motorcycle"))
-      melted_city_distances$region <- city_name
-      for(j in 1:2)
-        setDT(injury_table[[1]][[j]])[melted_city_distances,on=c('cas_mode','cas_index','road','region'),paste0(cas_col):=get(paste0('i.',cas_col))]
+      melted_city_distances[,region := city_name]
+      for(j in 1:2){
+        injury_table[[1]][[j]][melted_city_distances,on=c('cas_mode','cas_index','road','region'),paste0(cas_col):=get(paste0('i.',cas_col))]
+        for(mode_name in unique(injury_table[[1]][[j]]$cas_mode))
+          for(yr in unique(injury_table[[1]][[j]]$year)){
+            values <- injury_table[[1]][[j]]$year==yr&injury_table[[1]][[j]]$cas_mode==mode_name&injury_table[[1]][[j]]$region==city_name
+            injury_table[[1]][[j]][[cas_col]][values] <- 
+              injury_table[[1]][[j]][[cas_col]][values] * as.numeric(scale_by_year[scale_by_year$home_cityregion==city_name&scale_by_year$modename==mode_name,colnames(scale_by_year)==yr])
+          }
+      }
       
       ## whw strike
       la_distances <- subset(distance_for_strike,city_region==city_name)
@@ -147,27 +159,33 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
       melted_city_distances <- melt(city_distances,id.vars=c('strike_mode','strike_index'),variable.name='road',value.name=strike_col)
       melted_city_distances <- subset(melted_city_distances,strike_mode%in%c("pedestrian","cyclist","car/taxi","motorcycle"))
       melted_city_distances$region <- city_name
-      for(j in 1:2)
-        setDT(injury_table[[j]][[1]])[melted_city_distances,on=c('strike_mode','strike_index','road','region'),paste0(strike_col):=get(paste0('i.',strike_col))]
+      for(j in 1:2){
+        injury_table[[j]][[1]][melted_city_distances,on=c('strike_mode','strike_index','road','region'),paste0(strike_col):=get(paste0('i.',strike_col))]
+        for(mode_name in unique(injury_table[[j]][[1]]$strike_mode))
+          for(yr in unique(injury_table[[j]][[1]]$year)){
+            values <- injury_table[[j]][[1]]$year==yr&injury_table[[j]][[1]]$strike_mode==mode_name&injury_table[[j]][[1]]$region==city_name
+            injury_table[[j]][[1]][[strike_col]][values] <- 
+              injury_table[[j]][[1]][[strike_col]][values] * as.numeric(scale_by_year[scale_by_year$home_cityregion==city_name&scale_by_year$modename==mode_name,colnames(scale_by_year)==yr])
+          }
+      }
       
       # road by year, city
       
-      ## bus cas distance should be sum over distance_for_cas
-      for(road_type in roads)
-        mode_road_city_dist_ordered[mode_road_city_dist$mode=='bus'&mode_road_city_dist$city==city_name,which(colnames(mode_road_city_dist_ordered)==road_type)] <- sum(subset(distance_for_cas,cas_mode=='bus')[[road_type]])
-      
+      ##!! bus cas distance should be sum over distance_for_cas e.g.
+      #for(road_type in roads)
+      #  mode_road_city_dist_ordered[mode_road_city_dist$mode=='bus'&mode_road_city_dist$city==city_name,which(colnames(mode_road_city_dist_ordered)==road_type)] <- sum(subset(distance_for_cas,cas_mode=='bus')[[road_type]])
       for(j in 1:2){
-        
-        ##!! do road and year distances for bus, light goods, heavy goods.
         city_index <- injury_table[[2]][[j]]$region==city_name
-        for(cas_mode in c('bus','heavy goods','light goods')) {
-          indices <- which(injury_table[[2]][[j]]$cas_mode==cas_mode&city_index)
-          injury_table[[2]][[j]][[cas_col]][indices] <- mode_road_city_dist_ordered[mode_road_city_dist$mode==cas_mode&mode_road_city_dist$city==city_name,injury_table[[2]][[j]]$road_index[indices]]
-        }
+        for(cas_mode in c('bus','heavy goods','light goods'))
+          for(yr in years){
+            indices <- which(injury_table[[2]][[j]]$cas_mode==cas_mode&city_index&injury_table[[2]][[j]]$year==yr)
+            injury_table[[2]][[j]][[cas_col]][indices] <- c(mode_road_city_dist[mode_road_city_dist$year==yr&mode_road_city_dist$mode==cas_mode,colnames(mode_road_city_dist)==city_name])[injury_table[[2]][[j]]$road_index[indices]]
+          }
         city_index <- injury_table[[j]][[2]]$region==city_name
-        for(strike_mode in c('bus','heavy goods','light goods')) {
-          indices <- which(injury_table[[j]][[2]]$strike_mode==strike_mode&city_index)
-          injury_table[[j]][[2]][[strike_col]][indices] <- mode_road_city_dist_ordered[mode_road_city_dist$mode==strike_mode&mode_road_city_dist$city==city_name,injury_table[[j]][[2]]$road_index[indices]]
+        for(strike_mode in c('bus','heavy goods','light goods')) 
+          for(yr in years){
+          indices <- which(injury_table[[j]][[2]]$strike_mode==strike_mode&city_index&injury_table[[j]][[2]]$year==yr)
+          injury_table[[j]][[2]][[strike_col]][indices] <- c(mode_road_city_dist[mode_road_city_dist$year==yr&mode_road_city_dist$mode==strike_mode,colnames(mode_road_city_dist)==city_name])[injury_table[[j]][[2]]$road_index[indices]]
         }
       }
     }
