@@ -10,6 +10,7 @@ city_region_names <- unique(la_table$cityregion)
 city_region_names <- city_region_names[city_region_names!='']
 city_regions <- lapply(city_region_names,function(x)la_table$la[la_table$cityregion==x])
 names(city_regions) <- city_region_names
+saveRDS(city_regions,paste0(overflow_path,'city_regions.Rds'),version=2)
 
 region_codes <- data.frame(cityregion=c('london','westmidlands','bristol','nottingham','westyorkshire','liverpool','greatermanchester','northeast','sheffield'),
                            region_code=c('E12000007','E11000005',NA,'E10000024','E11000006','E11000002','E11000001','E11000004','E11000003'),
