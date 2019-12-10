@@ -84,7 +84,7 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   for(yr in years) 
     scale_by_year[[as.character(yr)]] <- scale_by_year_raw[[as.character(yr)]]/scale_by_year_raw[[as.character(reference_year)]]
   scale_by_year$modename[scale_by_year$modename=='cartaxi'] <- 'car/taxi'
-  scale_by_year$modename[scale_by_year$modename=='cycle'] <- 'bicycle'
+  scale_by_year$modename[scale_by_year$modename=='cycle'] <- 'cyclist'
   scale_by_year$modename[scale_by_year$modename=='van'] <- 'lgv'
   
   # road by mode
@@ -148,8 +148,9 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
         for(mode_name in unique(injury_table[[1]][[j]]$cas_mode))
           for(yr in unique(injury_table[[1]][[j]]$year)){
             values <- injury_table[[1]][[j]]$year==yr&injury_table[[1]][[j]]$cas_mode==mode_name&injury_table[[1]][[j]]$region==city_name
-            injury_table[[1]][[j]][[cas_col]][values] <- 
-              injury_table[[1]][[j]][[cas_col]][values] * as.numeric(scale_by_year[scale_by_year$home_cityregion==city_name&scale_by_year$modename==mode_name,colnames(scale_by_year)==yr])
+            if(mode_name%in%unique(scale_by_year$modename))
+              injury_table[[1]][[j]][[cas_col]][values] <- 
+                injury_table[[1]][[j]][[cas_col]][values] * as.numeric(scale_by_year[scale_by_year$home_cityregion==city_name&scale_by_year$modename==mode_name,colnames(scale_by_year)==yr])
           }
       }
       
@@ -164,8 +165,9 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
         for(mode_name in unique(injury_table[[j]][[1]]$strike_mode))
           for(yr in unique(injury_table[[j]][[1]]$year)){
             values <- injury_table[[j]][[1]]$year==yr&injury_table[[j]][[1]]$strike_mode==mode_name&injury_table[[j]][[1]]$region==city_name
-            injury_table[[j]][[1]][[strike_col]][values] <- 
-              injury_table[[j]][[1]][[strike_col]][values] * as.numeric(scale_by_year[scale_by_year$home_cityregion==city_name&scale_by_year$modename==mode_name,colnames(scale_by_year)==yr])
+            if(mode_name%in%unique(scale_by_year$modename))
+              injury_table[[j]][[1]][[strike_col]][values] <- 
+                injury_table[[j]][[1]][[strike_col]][values] * as.numeric(scale_by_year[scale_by_year$home_cityregion==city_name&scale_by_year$modename==mode_name,colnames(scale_by_year)==yr])
           }
       }
       
