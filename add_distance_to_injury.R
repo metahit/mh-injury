@@ -90,7 +90,7 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   # road by mode
   roads <- unique(injury_table[[1]][[1]]$road)
   
-  mode_road_city_dist <- read.csv(paste0(overflow_path,'mode_road_city.csv'),stringsAsFactors = F)
+  mode_road_city_dist <- read.csv(paste0(overflow_path,'mode_road_city_year.csv'),stringsAsFactors = F)
   colnames(mode_road_city_dist)[1:3] <- c('road','mode','year')
   mode_road_city_dist$mode[mode_road_city_dist$mode=='lgv'] <- 'light goods'
   mode_road_city_dist$mode[mode_road_city_dist$mode=='hgv'] <- 'heavy goods'
