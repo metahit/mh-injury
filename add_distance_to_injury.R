@@ -303,7 +303,7 @@ if(test_model){
 #formula_one <- 'count~ns(year,df=2)+cas_severity+cas_mode+strike_mode+road+region+offset(log(cas_distance)+log(strike_distance))'
 CAS_EXPONENT <- 1
 STR_EXPONENT <- 1
-formula_one <- 'count~year+cas_severity+cas_mode*strike_mode+road+road:(cas_mode+strike_mode)+region+offset(log(cas_distance)+log(strike_distance)-CAS_EXPONENT*log(cas_distance_sum)-STR_EXPONENT*log(strike_distance_sum))'
+formula_one <- 'count~year+cas_severity+cas_mode*strike_mode+road+road:(cas_mode+strike_mode)+region+offset(log(cas_distance)+log(strike_distance)+(CAS_EXPONENT-1)*log(cas_distance_sum)+(STR_EXPONENT-1)*log(strike_distance_sum))'
 
 ##!! decide offset, splines, interactions
 
