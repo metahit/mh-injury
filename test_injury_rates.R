@@ -9,7 +9,7 @@ library(data.table)
 model_modes <- c('pedestrian','cyclist','car/taxi','motorcycle')
 mh_path <- "~/overflow_dropbox/mh-injury/"
 overflow_path <- paste0(mh_path,"/rds_storage/")
-if(file.exists(paste0(overflow_path,'codes_for_stats19.Rds'))){
+if(file.exists(paste0(overflow_path,'codes_for_stats19.Rds'))&&file.exists(paste0(overflow_path,'city_regions.Rds'))){
   codes_for_stats19 <- readRDS(paste0(overflow_path,'codes_for_stats19.Rds'))
   city_regions <- readRDS(paste0(overflow_path,'city_regions.Rds'))
 }else{
@@ -18,24 +18,21 @@ if(file.exists(paste0(overflow_path,'codes_for_stats19.Rds'))){
 stats19 <- readRDS(paste0(overflow_path,'processed_injuries_3.Rds'))
 injuries <- subset(stats19, year>=2010&year<2016&cas_severity%in%c('Fatal','Serious'))
 injuries$road <- 'motorway'
-injuries$road[injuries$roadtype=='A'&injuries$urban_or_rural_area==1] <- 'urban_A'
-injuries$road[injuries$roadtype=='A'&injuries$urban_or_rural_area==2] <- 'rural_A'
-injuries$road[injuries$roadtype=='B, C, Unclassified'&injuries$urban_or_rural_area==1] <- 'urban_B'
-injuries$road[injuries$roadtype=='B, C, Unclassified'&injuries$urban_or_rural_area==2] <- 'rural_B'
+injuries$road[injuries$roadtype!='Motorway/A(M)'] <- 'other'
 
-all_distances <- readRDS('../mh-execute/inputs/distances/base_injury_distances.Rds')
+all_distances <- readRDS(paste0(overflow_path,'base_injury_distances.Rds'))
 mode_road_city_dist <- all_distances$distance_for_cas
-roadnames <- c('motorway','urban_primary','rural_primary','urban_other','rural_other')
+roadnames <- c('motorway','other')
 total_mode_city <- mode_road_city_dist[,lapply(.SD,sum),by=c('mode_name','city_region'),.SDcols=roadnames]
 #total_mode_city <- rowSums(mode_road_city_dist[,-c(1:2)])
-colnames(total_mode_city) <- c('mode','city','motorway','urban_A','rural_A','urban_B','rural_B')
+colnames(total_mode_city) <- c('mode','city','motorway','other')
 total_mode_city$mode[total_mode_city$mode=='walk'] <- 'pedestrian'
 total_mode_city$mode[total_mode_city$mode=='cycle'] <- 'cyclist'
 total_mode_city$mode[total_mode_city$mode=='cardrive'] <- 'car'
 total_mode_city$mode[total_mode_city$mode=='mbikedrive'] <- 'motorcycle'
 injuries$cas_mode[injuries$cas_mode=='car/taxi'] <- 'car'
 
-roads <- colnames(total_mode_city)[3:7]
+roads <- colnames(total_mode_city)[3:ncol(total_mode_city)]
 cities <- unique(total_mode_city$city)
 city_order <- c('northeast','bristol','nottingham','greatermanchester','sheffield','leeds','westmidlands','liverpool','london')#
 modes <- unique(total_mode_city$mode)
@@ -48,32 +45,33 @@ cols <- rainbow(length(cities))
       raw_rates <- t(sapply(cities,function(x)
         sapply(roads,function(y) nrow(subset(injuries,region==x&road==y&cas_mode==modes[i])))
       ))/
-        subset(total_mode_city,mode==dist_name)[,3:7]*1e6
+        subset(total_mode_city,mode==dist_name)[,3:ncol(total_mode_city)]*1e6
       print(dist_name)
       total <- sapply(roads,function(y) nrow(subset(injuries,road==y&cas_mode==modes[i])))/
-        colSums(subset(total_mode_city,mode==dist_name)[,3:7]*1e-6)
+        colSums(subset(total_mode_city,mode==dist_name)[,3:ncol(total_mode_city)]*1e-6)
       print(total)
       raw_rates <- raw_rates[match(city_order,cities),]
       rownames(raw_rates) <- city_order
-      raw_rates_write <- rbind(as.matrix(raw_rates),total=matrix(total,ncol=5))
+      raw_rates_write <- rbind(as.matrix(raw_rates),total=matrix(total,ncol=length(roads)))
       rownames(raw_rates_write) <- c(city_order,'total')
       xlsx::write.xlsx(raw_rates_write,file=paste0('cas_rates.xlsx'),sheetName=gsub('/','',modes[i]),append=(i!=1))
-      xlsx::write.xlsx(subset(total_mode_city,mode==dist_name)[,2:7],file=paste0('cas_distances.xlsx'),sheetName=gsub('/','',modes[i]),append=(i!=1))
+      xlsx::write.xlsx(subset(total_mode_city,mode==dist_name)[,2:ncol(total_mode_city)],file=paste0('cas_distances.xlsx'),sheetName=gsub('/','',modes[i]),append=(i!=1))
       raw_rates[raw_rates==0] <- 1e-0
       raw_rates[is.na(raw_rates)] <- 1e-0
       raw_rates[!sapply(raw_rates,is.finite)] <- 1e-0
       barplot(log(as.matrix(raw_rates)),beside=T,col=cols,main=dist_name)
-    #}
-    if(dist_name=='heavy goods') legend(fill=cols,legend=city_order,x=1,y=4,bty='n')
   }
-  dev.off()}
+  plot(0,0,col='white',frame=F,xaxt='n',yaxt='n')
+  legend(fill=cols,legend=city_order,x=-1,y=1,bty='n')
+  dev.off()
+  }
 
 
 mode_road_city_dist <- all_distances$distance_for_strike
-roadnames <- c('motorway','urban_primary','rural_primary','urban_other','rural_other')
+roadnames <- c('motorway','other')
 total_mode_city <- mode_road_city_dist[,lapply(.SD,sum),by=c('mode_name','city_region'),.SDcols=roadnames]
 #total_mode_city <- rowSums(mode_road_city_dist[,-c(1:2)])
-colnames(total_mode_city) <- c('mode','city','motorway','urban_A','rural_A','urban_B','rural_B')
+colnames(total_mode_city) <- c('mode','city','motorway','other')
 total_mode_city$mode[total_mode_city$mode=='walk'] <- 'pedestrian'
 total_mode_city$mode[total_mode_city$mode=='cycle'] <- 'cyclist'
 total_mode_city$mode[total_mode_city$mode=='cardrive'] <- 'car'
@@ -86,23 +84,24 @@ injuries$strike_mode[injuries$strike_mode=='car/taxi'] <- 'car'
       raw_rates <- t(sapply(cities,function(x)
         sapply(roads,function(y) nrow(subset(injuries,region==x&road==y&strike_mode==modes[i])))
       ))/
-        subset(total_mode_city,mode==dist_name)[,3:7]*1e6
+        subset(total_mode_city,mode==dist_name)[,3:ncol(total_mode_city)]*1e6
       print(dist_name)
       total <- sapply(roads,function(y) nrow(subset(injuries,road==y&strike_mode==modes[i])))/
-        colSums(subset(total_mode_city,mode==dist_name)[,3:7]*1e-6)
+        colSums(subset(total_mode_city,mode==dist_name)[,3:ncol(total_mode_city)]*1e-6)
       print(total)
       raw_rates <- raw_rates[match(city_order,cities),]
       rownames(raw_rates) <- city_order
-      raw_rates_write <- rbind(as.matrix(raw_rates),total=matrix(total,ncol=5))
+      raw_rates_write <- rbind(as.matrix(raw_rates),total=matrix(total,ncol=length(roads)))
       rownames(raw_rates_write) <- c(city_order,'total')
       xlsx::write.xlsx(raw_rates_write,file=paste0('strike_rates.xlsx'),sheetName=gsub('/','',modes[i]),append=(i!=1))
-      xlsx::write.xlsx(subset(total_mode_city,mode==dist_name)[,2:7],file=paste0('strike_distances.xlsx'),sheetName=gsub('/','',modes[i]),append=(i!=1))
+      xlsx::write.xlsx(subset(total_mode_city,mode==dist_name)[,2:ncol(total_mode_city)],file=paste0('strike_distances.xlsx'),sheetName=gsub('/','',modes[i]),append=(i!=1))
       raw_rates[raw_rates==0] <- 1e-0
       raw_rates[is.na(raw_rates)] <- 1e-0
       raw_rates[!sapply(raw_rates,is.finite)] <- 1e-0
       barplot(log(as.matrix(raw_rates)),beside=T,col=cols,main=dist_name)
-    if(dist_name=='heavy goods') legend(fill=cols,legend=city_order,x=1,y=5.5,bty='n')
   }
+  plot(0,0,col='white',frame=F,xaxt='n',yaxt='n')
+  legend(fill=cols,legend=city_order,x=-1,y=1,bty='n')
   dev.off()
 }
 #################################################################
