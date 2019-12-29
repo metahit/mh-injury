@@ -112,18 +112,30 @@ injuries$strike_mode[injuries$strike_mode=='car/taxi'] <- 'car'
 for(i in 1:length(modes)){
   dist_name <- strsplit(modes[i],'/')[[1]][1]
   #if(dist_name %in% mode_road_city_dist$mode){
-    raw_numbers <- t(sapply(cities,function(x)
-      sapply(roads,function(y) nrow(subset(injuries,region==x&road==y&strike_mode==modes[i])))
-    ))
-    print(dist_name)
-    total <- sapply(roads,function(y) nrow(subset(injuries,road==y&strike_mode==modes[i])))
-    print(total)
-    raw_numbers <- raw_numbers[match(city_order,cities),]
-    rownames(raw_numbers) <- city_order
-    raw_numbers <- rbind(raw_numbers,total=total)
-    xlsx::write.xlsx(raw_numbers,file='strike_numbers.xlsx',sheetName=paste0(gsub('/','',modes[i]),'_ksi'),append=(i!=1))
+  raw_numbers <- t(sapply(cities,function(x)
+    sapply(roads,function(y) nrow(subset(injuries,region==x&road==y&strike_mode==modes[i])))
+  ))
+  print(dist_name)
+  total <- sapply(roads,function(y) nrow(subset(injuries,road==y&strike_mode==modes[i])))
+  print(total)
+  raw_numbers <- raw_numbers[match(city_order,cities),]
+  rownames(raw_numbers) <- city_order
+  raw_numbers <- rbind(raw_numbers,total=total)
+  xlsx::write.xlsx(raw_numbers,file='strike_numbers.xlsx',sheetName=paste0(gsub('/','',modes[i]),'_ksi'),append=(i!=1))
   #}
 }
+
+cas_modes <- unique(injuries$cas_mode)
+raw_numbers <- t(sapply(cities,function(x)
+  sapply(cas_modes,function(y) nrow(subset(injuries,region==x&road=='other'&cas_mode==y&strike_mode=='cyclist')))
+))
+total <- sapply(cas_modes,function(y) nrow(subset(injuries,road=='other'&cas_mode==y&strike_mode=='cyclist')))
+print(total)
+raw_numbers <- raw_numbers[match(city_order,cities),]
+rownames(raw_numbers) <- city_order
+raw_numbers <- rbind(raw_numbers,total=total)
+xlsx::write.xlsx(raw_numbers,file='cyclist_strike_numbers.xlsx',sheetName=paste0(gsub('/','',modes[i]),'_ksi'),append=(i!=1))
+#}
 
 # strike fatal
 for(i in 1:length(modes)){
