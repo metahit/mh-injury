@@ -73,7 +73,8 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   
   ## distance data
   # scale by year
-  scale_by_year_raw <- readxl::read_xls('../mh-scenarios/1_InputData/2_CityRegion_scaling/RTS_NTS_distances_cityreg.xls',sheet=3,col_names=T)
+  ##!! needs to match a sheet called scalingweight_cityreg which on 28/12/2019 is 4
+  scale_by_year_raw <- readxl::read_xls('../mh-scenarios/1_InputData/2_CityRegion_scaling/RTS_NTS_distances_cityreg.xls',sheet=4,col_names=T)
   ## reference year is 2015
   reference_year <- 2015
   reference_col <- which(sapply(colnames(scale_by_year_raw),function(x)grepl(reference_year,x)))
