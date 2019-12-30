@@ -332,7 +332,10 @@ for(i in 1:2) {
     trimmed_mod <- trim_glm_object(mod[[i]][[j]])
     trimmed_mod$offset <- c()
     trimmed_mod$linear.predictors <- c()
-    city_table[[i]][[j]]$base_pred <- predict(trimmed_mod,newdata=city_table[[i]][[j]],type='response')
+    nonzero <- city_table[[i]][[j]]$cas_distance > 0 & city_table[[i]][[j]]$strike_distance > 0
+    pred_values <- predict(trimmed_mod,newdata=subset(injury_table[[i]][[j]],year==pred_year),type='response')
+    city_table[[i]][[j]]$base_pred <- 0
+    city_table[[i]][[j]]$base_pred[nonzero] <- pred_values
     saveRDS(trimmed_mod,paste0('../mh-execute/inputs/injury/city_region',i,j,'.Rds'),version=2)
   }
 }
