@@ -304,8 +304,10 @@ basic_formula <- 'count~year+cas_severity+cas_mode*strike_mode+road+road:(cas_mo
 
 ## original model: for distance and exponents not uncertain ###############################################
 #formula_one <- 'count~ns(year,df=2)+cas_severity+cas_mode+strike_mode+road+region+offset(log(cas_distance)+log(strike_distance))'
-CAS_EXPONENT <- 1
-STR_EXPONENT <- 1
+CAS_EXPONENT <- 0.9
+STR_EXPONENT <- 0.9
+model_settings <- list(DISTANCE_SCALAR_CAR_TAXI=1,DISTANCE_SCALAR_CYCLING=1,DISTANCE_SCALAR_MOTORCYCLE=1,DISTANCE_SCALAR_WALKING=1,CAS_EXPONENT=CAS_EXPONENT,STR_EXPONENT=STR_EXPONENT)
+saveRDS(model_settings,'../mh-execute/inputs/injury/model_settings.Rds')
 formula_one <- paste0(basic_formula,'+offset(log(cas_distance)+log(strike_distance)+(CAS_EXPONENT-1)*log(cas_distance_sum)+(STR_EXPONENT-1)*log(strike_distance_sum))')
 
 ##!! decide offset, splines, interactions
