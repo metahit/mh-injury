@@ -85,9 +85,7 @@ get.data <- function(){
       }else{
         read.csv( paste0(overflow_path,'/',short_name[table_name_ind]),stringsAsFactors = F)
       }
-      print(file_contents[1,])
       assign(table_name,fastmerge(get(table_name),file_contents))
-      print(get(table_name)[1,])
       unlink(temp)
     }
   }
