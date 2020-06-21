@@ -294,29 +294,6 @@ if(file.exists(paste0(overflow_path,'processed_injuries_3.Rds'))){
   stopped1$veh_male.2[sel] = stopped1$ped_cas_male[sel]
   stopped1$veh_age.2[sel] = stopped1$ped_cas_age[sel]
   
-  ##RJ
-  stopped1 <- subset(stopped1,!duplicated(accident_index))
-  for(i in 1:17) stopped1[[paste0('na',i)]] <- stopped1[[paste0('veh_mode.',i)]]!='pedestrian'&!(is.na(stopped1[[paste0('veh_male.',i)]])|is.na(stopped1[[paste0('veh_age.',i)]]))
-  na_names <- sapply(1:17,function(x)paste0('na',x))
-  na_cols <- match(na_names,names(stopped1))
-  stopped1$num_true <- apply(stopped1[,na_cols],1,function(x)sum(x==T))
-  stopped1$firstcol <- 1
-  stopped1$secondcol <- 2
-  stopped1$firstcol[stopped1$num_true==1] <- apply(stopped1[stopped1$num_true==1,na_cols],1,function(x)which(x==T))
-  stopped1$secondcol[stopped1$firstcol>1] <- 1
-  stopped1$firstcol[stopped1$num_true>1] <- apply(stopped1[stopped1$num_true>1,na_cols],1,function(x)which(x==T)[1])
-  stopped1$secondcol[stopped1$num_true>1] <- apply(stopped1[stopped1$num_true>1,na_cols],1,function(x)which(x==T)[2])
-  columns <- which(colnames(stopped1)%in%sapply(1:17,function(x)paste0('veh_reference.',x)))
-  stopped1$veh_reference_firstlarge <- sapply(1:nrow(stopped1),function(x)stopped1[x,columns[stopped1$firstcol[x]]])
-  stopped1$veh_mode_firstlarge <- sapply(1:nrow(stopped1),function(x)stopped1[x,1+columns[stopped1$firstcol[x]]])
-  stopped1$veh_male_firstlarge <- sapply(1:nrow(stopped1),function(x)stopped1[x,2+columns[stopped1$firstcol[x]]])
-  stopped1$veh_age_firstlarge <- sapply(1:nrow(stopped1),function(x)stopped1[x,3+columns[stopped1$firstcol[x]]])
-  stopped1$veh_reference_secondlarge <- sapply(1:nrow(stopped1),function(x)stopped1[x,columns[stopped1$secondcol[x]]])
-  stopped1$veh_mode_secondlarge <- sapply(1:nrow(stopped1),function(x)stopped1[x,1+columns[stopped1$secondcol[x]]])
-  stopped1$veh_male_secondlarge <- sapply(1:nrow(stopped1),function(x)stopped1[x,2+columns[stopped1$secondcol[x]]])
-  stopped1$veh_age_secondlarge <- sapply(1:nrow(stopped1),function(x)stopped1[x,3+columns[stopped1$secondcol[x]]])
-  ##
-  
   for (x in c('reference','mode','male','age')) {
     names(stopped1)[names(stopped1)==paste0('veh_',x,'.1')] = paste0('veh_',x,'_firstlarge')
     names(stopped1)[names(stopped1)==paste0('veh_',x,'.2')] = paste0('veh_',x,'_secondlarge')
@@ -414,46 +391,10 @@ if(file.exists(paste0(overflow_path,'processed_injuries_3.Rds'))){
 
 ######################################################################
 
-nrow(subset(stopped,cas_severity=='Fatal'))
-sapply(c('Fatal','Serious','Slight'),function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,cas_severity==y&region==x))))
 
 hr <- readRDS(paste0(overflow_path,'hitrun.rds'))
 colnames(hr)[2] <- 'veh_reference'
 stopped <- left_join(stopped,hr[hr$accident_index%in%stopped$accident_index,],by=c('veh_reference','accident_index'))
-severity_tab <- sapply(c('Fatal','Serious','Slight'),function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,cas_severity==y&region==x))))
-sapply(c(1,2,3),function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,urban_or_rural_area==y&region==x))))
-hit_run_tab <- sapply(c(0,1),function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,hitrun==y&region==x))))
-roadtype_tab <- sapply(c('Motorway/A(M)','A','B, C, Unclassified'),function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,roadtype==y&region==x))))
-cas_mode_tab <- sapply(c('pedestrian','cyclist','car/taxi','motorcycle'),function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,cas_mode==y&region==x))))
-strike_mode_tab <- sapply(c('pedestrian','cyclist','car/taxi','motorcycle','bus','heavy goods','light goods','NOV'),function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,strike_mode==y&region==x))))
-year_tab <- sapply(2005:2017,function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,year==y&region==x))))
-cas_male_tab <- sapply(c(0,1),function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,cas_male==y&region==x))))
-strike_male_tab <- sapply(c(0,1),function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,strike_male==y&region==x))))
-cas_age_tab <- sapply(0:100,function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,cas_age==y&region==x))))
-strike_age_tab <- sapply(0:100,function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,strike_age==y&region==x))))
-
-library(pracma)
-cols <- rainbow(length(codes_for_stats19))
-par(mar=c(5,5,2,2)); matplot(t(repmat(c(0:100),nrow(cas_age_tab),1)),t(cas_age_tab),lwd=2,typ='l',lty=1,frame=F,xlab='Casualty age',ylab='Count',cex.axis=1.5,cex.lab=1.5,col=cols)
-legend(legend=rev(names(codes_for_stats19)),col=rev(cols),x=60,y=8000,bty='n',lwd=2)
-par(mar=c(5,5,2,2)); matplot(t(repmat(c(0:100),nrow(strike_age_tab),1)),t(strike_age_tab),lwd=2,typ='l',lty=1,frame=F,xlab='Strike age',ylab='Count',cex.axis=1.5,cex.lab=1.5,col=cols)
-legend(legend=rev(names(codes_for_stats19)),col=rev(cols),x=60,y=7000,bty='n',lwd=2)
-par(mar=c(5,5,2,2)); matplot(t(repmat(c(2005:2017),nrow(year_tab),1)),t(year_tab),lwd=2,typ='l',lty=1,frame=F,xlab='Year',ylab='Count',cex.axis=1.5,cex.lab=1.5,col=cols)
-legend(legend=rev(names(codes_for_stats19)),col=rev(cols),x=2011,y=24000,bty='n',lwd=2)
-par(mar=c(9,5,2,2)); barplot(hit_run_tab[,2]/rowSums(hit_run_tab)*100,beside=T,col=cols,xlab='',ylab='Percent hit and run',cex.axis=1.5,cex.lab=1.5,las=2)
-par(mar=c(5,5,2,2)); barplot(roadtype_tab/t(repmat(rowSums(roadtype_tab),3,1))*100,beside=T,col=cols,xlab='Road type',names.arg = c('Motorway/A(M)','A','B, C, Unclassified'),ylab='Percent',cex.axis=1.5,cex.lab=1.5)
-par(mar=c(5,5,2,2)); barplot(cas_mode_tab/t(repmat(rowSums(cas_mode_tab),4,1))*100,beside=T,col=cols,xlab='Casualty mode',names.arg=c('pedestrian','cyclist','car/taxi','motorcycle'),ylab='Percent',cex.axis=1.5,cex.lab=1.5)
-par(mar=c(9,5,2,2)); barplot(cas_male_tab[,2]/rowSums(cas_male_tab)*100,beside=T,col=cols,xlab='',ylab='Percent male casualties',cex.axis=1.5,cex.lab=1.5,las=2)
-par(mar=c(9,5,2,2)); barplot(strike_male_tab[,2]/rowSums(strike_male_tab)*100,beside=T,col=cols,xlab='',ylab='Percent male strikers',cex.axis=1.5,cex.lab=1.5,las=2)
-par(mar=c(6,6,2,2)); barplot(strike_mode_tab/t(repmat(rowSums(strike_mode_tab),8,1))*100,beside=T,col=cols,ylab='Percent',names.arg=c('pedestrian','cyclist','car/taxi','motorcycle','bus','heavy goods','light goods','NOV'),cex.axis=1.5,cex.lab=1.5,las=2)
-par(mar=c(5,5,2,2)); barplot(severity_tab/t(repmat(rowSums(severity_tab),3,1))*100,beside=T,col=cols,xlab='Casualty severity',names.arg = c('Fatal','Serious','Slight'),ylab='Percent',cex.axis=1.5,cex.lab=1.5)
-par(mar=c(9,6,2,2)); barplot(severity_tab[,1],beside=T,col=cols,xlab='',cex.axis=1.5,cex.lab=1.5,las=2); mtext(side=2,'Fatalities',line=4,cex=1.5)
-
-strike_age_hitrun_tab <- sapply(0:100,function(y)sapply(names(codes_for_stats19),function(x)nrow(subset(stopped,strike_age==y&region==x&hitrun==0))))
-par(mar=c(5,5,2,2)); matplot(t(repmat(c(0:100),nrow(strike_age_hitrun_tab),1)),t(strike_age_hitrun_tab),lwd=2,typ='l',lty=1,frame=F,xlab='Strike age',ylab='Count',cex.axis=1.5,cex.lab=1.5,col=cols)
-legend(legend=rev(names(codes_for_stats19)),col=rev(cols),x=60,y=7000,bty='n',lwd=2)
-
-
 
 excluded_injuries <- list()
 excluded_injuries$child_casualty <- subset(stopped,cas_age<16)

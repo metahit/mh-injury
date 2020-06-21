@@ -12,7 +12,7 @@ library(splines)
 #library(biglm)
 model_modes <- c('pedestrian','cyclist','car/taxi','motorcycle')
 
-mh_path <- "~/overflow_dropbox/mh-injury/"
+mh_path <- getwd()
 overflow_path <- paste0(mh_path,"/rds_storage/")
 
 
