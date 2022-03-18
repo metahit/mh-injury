@@ -1,5 +1,5 @@
 rm(list=ls())
-setwd('~/overflow_dropbox/mh-injury/')
+#setwd('~/overflow_dropbox/mh-injury/')
 ######################################################################
 
 
@@ -96,7 +96,11 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
   mode_road_city_dist$mode[mode_road_city_dist$mode=='lgv'] <- 'light goods'
   mode_road_city_dist$mode[mode_road_city_dist$mode=='hgv'] <- 'heavy goods'
   
-  scenarios <- c('base_','scen_')
+  all_scens <- list.dirs(path = "../mh-execute/inputs/scenarios", full.names = FALSE, recursive = FALSE)
+  
+  all_scens <- paste0(all_scens, "_")
+  
+  scenarios <- c('base_', all_scens)
   all_distances <- list()
   for(scen in 1:length(scenarios))
     all_distances[[scen]] <- readRDS(paste0(overflow_path,scenarios[scen],'injury_distances.Rds'))
@@ -195,6 +199,7 @@ if(file.exists(paste0(overflow_path,'processed_injuries_8.Rds'))){
         city_index <- injury_table[[2]][[j]]$region==city_name
         for(cas_mode in c('bus','heavy goods','light goods'))
           for(yr in years){
+            print(paste(city_name, cas_mode, yr))
             indices <- which(injury_table[[2]][[j]]$cas_mode==cas_mode&city_index&injury_table[[2]][[j]]$year==yr)
             injury_table[[2]][[j]][[cas_col]][indices] <- c(mode_road_city_dist[mode_road_city_dist$year==yr&mode_road_city_dist$mode==cas_mode,colnames(mode_road_city_dist)==city_name])[injury_table[[2]][[j]]$road_index[indices]]
           }
