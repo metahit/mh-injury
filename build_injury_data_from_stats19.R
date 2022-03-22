@@ -391,7 +391,7 @@ if(file.exists(paste0(overflow_path,'processed_injuries_3.Rds'))){
 
 ######################################################################
 
-
+stopped <- readRDS("rds_storage/stats19_29.Rds")
 hr <- readRDS(paste0(overflow_path,'hitrun.rds'))
 colnames(hr)[2] <- 'veh_reference'
 stopped <- left_join(stopped,hr[hr$accident_index%in%stopped$accident_index,],by=c('veh_reference','accident_index'))
